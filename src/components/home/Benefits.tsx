@@ -31,7 +31,7 @@ function Tile({
     <li className={span}>
       <Reveal delay={delay} className="h-full">
         <div className="card card-lift group flex h-full flex-col overflow-hidden">
-        <div className="relative h-56 overflow-hidden bg-mist sm:h-64">
+        <div className="relative h-56 overflow-hidden bg-mist sm:h-64 2xl:h-80 min-[1800px]:h-[26rem]">
           {children}
         </div>
         <div className="flex flex-1 flex-col p-6 sm:p-7">

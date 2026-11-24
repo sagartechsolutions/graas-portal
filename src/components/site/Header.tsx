@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useScroll, useSpring } from "motion/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { browserClient } from "@/lib/browser";
 import { NAV, PROGRAMS } from "@/lib/site";
 import Logo from "./Logo";
 
@@ -11,6 +12,8 @@ export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const staffArea = pathname.startsWith("/admin");
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 26, mass: 0.4 });
 
@@ -19,6 +22,12 @@ export default function Header() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useEffect(() => {
+    const sb = browserClient();
+    sb.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data } = sb.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
+    return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -42,7 +51,7 @@ export default function Header() {
           <Link href="/" aria-label="GRAAS home" className="shrink-0" onClick={() => setOpen(false)}>
             <Logo />
           </Link>
-          <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
+          <nav aria-label="Main" className={`hidden items-center gap-0.5 ${staffArea ? "" : "lg:flex"}`}>
             <Link href="/membership" className={item("/membership")} aria-current={pathname === "/membership" ? "page" : undefined}>
               Membership
             </Link>
@@ -71,12 +80,25 @@ export default function Header() {
             ))}
           </nav>
           <div className="flex items-center gap-2.5">
-            <Link href="/#join" className="btn btn-primary hidden !min-h-11 !px-5 sm:inline-flex">
-              Become a member
-            </Link>
+            {staffArea ? (
+              <Link href="/" className="btn btn-ghost !min-h-11 !px-5">
+                View website
+              </Link>
+            ) : (
+              <>
+                <Link href={signedIn ? "/account" : "/signin"} className="hidden rounded-full px-3.5 py-2 text-[0.95rem] font-semibold transition-colors hover:bg-mist sm:inline-flex">
+                  {signedIn ? "My account" : "Sign in"}
+                </Link>
+                {!signedIn && (
+                  <Link href="/join" className="btn btn-primary hidden !min-h-11 !px-5 sm:inline-flex">
+                    Become a member
+                  </Link>
+                )}
+              </>
+            )}
             <button
               type="button"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white lg:hidden"
+              className={`h-11 w-11 items-center justify-center rounded-full border border-line bg-white ${staffArea ? "hidden" : "flex lg:hidden"}`}
               aria-expanded={open}
               aria-controls="mobile-menu"
               aria-label={open ? "Close menu" : "Open menu"}
@@ -98,9 +120,14 @@ export default function Header() {
                 {n.label}
               </Link>
             ))}
-            <Link href="/#join" onClick={() => setOpen(false)} className="btn btn-primary mt-7">
-              Become a member
+            <Link href={signedIn ? "/account" : "/join"} onClick={() => setOpen(false)} className="btn btn-primary mt-7">
+              {signedIn ? "My account" : "Become a member"}
             </Link>
+            {!signedIn && (
+              <Link href="/signin" onClick={() => setOpen(false)} className="btn btn-ghost mt-3">
+                Sign in
+              </Link>
+            )}
           </nav>
         </div>
       )}

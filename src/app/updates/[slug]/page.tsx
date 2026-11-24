@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import PreRegister from "@/components/home/PreRegister";
+import JoinBand from "@/components/home/JoinBand";
 import Photo from "@/components/ui/Photo";
 import { getPost, getPosts } from "@/lib/data";
 import { longDate } from "@/lib/format";
@@ -75,7 +75,7 @@ export default function Page({ params }: PageProps<"/updates/[slug]">) {
           <Article params={params} />
         </Suspense>
       </section>
-      <PreRegister />
+      <JoinBand />
     </>
   );
 }

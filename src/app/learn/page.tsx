@@ -9,7 +9,7 @@ export default function Page() {
     <InfoPage
       title="Learn robotics the way it is practised"
       intro="Start with a free live lecture. Go deeper with courses that end in a project, a quiz and a certificate you earn."
-      status="Opening after membership launch"
+      status="Opening for members soon"
       interest="lectures"
       cta={{ title: "Hear about the first lecture", intro: "Pre-register and we will message you when the first open lecture is scheduled." }}
       blocks={[

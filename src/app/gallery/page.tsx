@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import GalleryGrid from "@/components/gallery/GalleryGrid";
-import PreRegister from "@/components/home/PreRegister";
+import JoinBand from "@/components/home/JoinBand";
 import { getGallery } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Gallery", description: "Robotics and automation in pictures, from the Global Robotics And Automation Society." };
@@ -14,7 +14,7 @@ export default async function Page() {
         <p className="lede mt-4">The machines and the work that members train for. Photos from GRAAS chapters, lectures and events will be added here as they happen.</p>
         {items.length === 0 ? <p className="card mt-12 p-8 text-ink2">Photos will appear here soon.</p> : <GalleryGrid items={items} />}
       </section>
-      <PreRegister />
+      <JoinBand />
     </>
   );
 }

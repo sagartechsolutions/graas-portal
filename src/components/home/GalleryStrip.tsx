@@ -11,7 +11,7 @@ function Row({ items, reverse = false }: { items: GalleryItem[]; reverse?: boole
           items.map((g) => {
             const ratio = g.width && g.height ? g.width / g.height : 1.5;
             return (
-              <div key={`${copy}-${g.id}`} aria-hidden={copy === 1} className="h-44 shrink-0 overflow-hidden rounded-2xl sm:h-60" style={{ aspectRatio: Math.max(0.8, Math.min(ratio, 1.9)) }}>
+              <div key={`${copy}-${g.id}`} aria-hidden={copy === 1} className="h-44 shrink-0 overflow-hidden rounded-2xl sm:h-60 2xl:h-80" style={{ aspectRatio: Math.max(0.8, Math.min(ratio, 1.9)) }}>
                 <Photo src={g.image_url} alt={copy === 0 ? (g.caption ?? "") : ""} sizes="400px" className="h-full w-full" />
               </div>
             );

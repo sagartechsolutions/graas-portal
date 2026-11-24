@@ -26,7 +26,7 @@ export default function Climb() {
         </div>
 
         <div ref={ref} className="mt-20 sm:mt-24">
-          <div className="relative flex h-[230px] items-end gap-2.5 sm:h-[360px] sm:gap-4 lg:h-[470px] lg:gap-5">
+          <div className="relative flex h-[230px] items-end gap-2.5 sm:h-[360px] sm:gap-4 lg:h-[470px] lg:gap-5 2xl:h-[580px]">
             {STAGES.map((s, i) => (
               <div key={s.name} className="relative flex h-full flex-1 items-end">
                 {i === 3 && (
@@ -47,13 +47,21 @@ export default function Climb() {
                 >
                   <motion.div className="hidden h-full flex-col justify-end p-5 sm:flex lg:p-7" initial={false} animate={on ? { opacity: 1 } : { opacity: 0 }} transition={{ duration: 0.5, delay: reduce ? 0 : 0.55 + i * 0.16 }}>
                     <h3 className="text-2xl font-semibold tracking-tight lg:text-[2rem]">{s.name}</h3>
-                    <p className="mt-2 hidden max-w-[15rem] leading-snug opacity-85 lg:block">{s.text}</p>
+                    <p className="mt-2 hidden max-w-[22rem] leading-snug opacity-85 lg:block">{s.text}</p>
                   </motion.div>
                 </motion.div>
               </div>
             ))}
           </div>
-          <div className="mt-2 h-1.5 rounded-full bg-ink sm:mt-3 sm:h-2" />
+          <div className="relative mt-2 h-1.5 rounded-full bg-ink sm:mt-3 sm:h-2">
+            <svg aria-hidden="true" className="rover hidden sm:block" width="58" height="30" viewBox="0 0 58 30">
+              <rect x="6" y="6" width="44" height="14" rx="5" fill="#fff" stroke="#000e21" strokeWidth="2" />
+              <rect x="34" y="1" width="9" height="6" rx="2" fill="#000e21" />
+              <circle cx="46" cy="13" r="3" fill="#02ae3e" />
+              <g className="wheel"><circle cx="16" cy="23" r="6" fill="#000e21" /><rect x="15" y="18" width="2" height="10" fill="#8e919a" /></g>
+              <g className="wheel"><circle cx="41" cy="23" r="6" fill="#000e21" /><rect x="40" y="18" width="2" height="10" fill="#8e919a" /></g>
+            </svg>
+          </div>
 
           <dl className="mt-8 grid gap-5 sm:grid-cols-2 lg:hidden">
             {STAGES.map((s) => (

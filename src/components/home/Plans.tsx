@@ -1,10 +1,9 @@
 import { getPlans } from "@/lib/data";
 import type { Plan } from "@/lib/site";
-import ReserveButton from "./ReserveButton";
+import Link from "next/link";
 
 const inr = (n: number) => new Intl.NumberFormat("en-IN").format(n);
 const term = (m: number | null) => (m === null ? "one time" : m === 12 ? "per year" : m % 12 === 0 ? `for ${m / 12} years` : `for ${m} months`);
-const KIND: Record<Plan["audience"], string> = { student: "student", professional: "professional", institution: "college", industry: "industry" };
 const TONE: Record<Plan["audience"], string> = { student: "#b7babf", professional: "#8e919a", institution: "#5a616b", industry: "#000e21" };
 const HEIGHT: Record<Plan["audience"], number> = { student: 14, professional: 20, institution: 26, industry: 32 };
 
@@ -17,7 +16,7 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
         {heading && (
           <div className="max-w-3xl">
             <h2 className="h-section">A membership for where you are.</h2>
-            <p className="lede mt-4">Four ways to join. Fees will be published here before applications open, and pre-registering costs nothing.</p>
+            <p className="lede mt-4">Four ways to join. Each fee is shown here and again before you pay.</p>
           </div>
         )}
         <ul className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-4 ${heading ? "mt-12" : ""}`}>
@@ -52,8 +51,11 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
                 ))}
               </ul>
               {p.requires_approval && <p className="mt-4 text-sm text-ink2">Applications are verified before payment.</p>}
+              {p.price_inr === null && <p className="mt-4 text-sm text-ink2">You can apply now and pay when the fee is announced.</p>}
               <div className="mt-auto pt-7">
-                <ReserveButton kind={KIND[p.audience]}>Reserve my place</ReserveButton>
+                <Link href={`/join?plan=${p.code}`} className="btn btn-primary w-full !min-h-12">
+                  Choose {p.name.toLowerCase()}
+                </Link>
               </div>
             </li>
           ))}

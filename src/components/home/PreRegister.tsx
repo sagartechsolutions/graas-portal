@@ -211,7 +211,7 @@ export default function PreRegister({
 
   return (
     <section id="join" className="px-3 py-14 sm:px-6 lg:py-20">
-      <div className="relative mx-auto max-w-[1320px] overflow-hidden rounded-[28px] bg-ink px-5 py-12 text-white sm:px-10 sm:py-16 lg:rounded-[40px] lg:px-16 lg:py-20">
+      <div className="relative mx-auto max-w-[1800px] overflow-hidden rounded-[28px] bg-ink px-5 py-12 text-white sm:px-10 sm:py-16 lg:rounded-[40px] lg:px-16 lg:py-20">
         <LogoMark
           size={560}
           tone="light"

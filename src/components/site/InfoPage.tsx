@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import PreRegister from "@/components/home/PreRegister";
+import Link from "next/link";
+import JoinBand from "@/components/home/JoinBand";
 import Photo from "@/components/ui/Photo";
 import { PHOTOS, type PhotoKey } from "@/lib/photos";
 
@@ -24,7 +25,6 @@ export default function InfoPage({
   stepsTitle,
   interest,
   photo,
-  cta,
   children,
 }: {
   title: string;
@@ -52,9 +52,9 @@ export default function InfoPage({
           <h1 className="h-display mt-5 !text-[clamp(2.4rem,1.5rem+3.6vw,4.1rem)]">{title}</h1>
           <p className="lede mt-5">{intro}</p>
           <p className="mt-8">
-            <a href="#join" className="btn btn-primary">
+            <Link href="/join" className="btn btn-primary">
               Become a member
-            </a>
+            </Link>
           </p>
         </div>
         <div className="aspect-[4/3] overflow-hidden rounded-[28px]">
@@ -100,7 +100,7 @@ export default function InfoPage({
         </div>
       </section>
       {children}
-      <PreRegister interest={interest} title={cta?.title} intro={cta?.intro} />
+      <JoinBand />
     </>
   );
 }

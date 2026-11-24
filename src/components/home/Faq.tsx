@@ -1,10 +1,11 @@
 const QA = [
-  { q: "Who can become a member?", a: "Students from diploma to PhD, working professionals, faculty, schools, colleges and companies. Students under 18 join through a parent or their school." },
-  { q: "What does membership cost?", a: "The fee for each plan will be published on the Membership page before applications open. Pre-registering is free." },
-  { q: "What happens after I pre-register?", a: "You receive a pre-registration number and an invite link to share. GRAAS will message you on the mobile number you gave on the day membership opens." },
-  { q: "Does pre-registering commit me to paying?", a: "No. It reserves your place and lets us tell you when membership opens. You decide whether to join once the fees are published." },
-  { q: "Can my college or school start a chapter?", a: "Yes. A chapter needs a group of interested students and a faculty coordinator. Pre-register as a college or school representative and choose “Starting a chapter”." },
-  { q: "We are a company. How do we take part?", a: "Industry members can post jobs, internships and automation problems for members to work on, and demonstrate at GRAAS events. Pre-register as an industry representative." },
+  { q: "Who can become a member?", a: "Students aged 18 or older from diploma to PhD, working professionals, faculty, schools, colleges and companies. Students under 18 take part through a parent or their school." },
+  { q: "What does membership cost?", a: "Each plan shows its fee on this page and again before you pay. If a plan says the fee is to be announced, you can still create your account and apply; you pay when the fee is published." },
+  { q: "How do I pay?", a: "Online through Razorpay, by UPI, card or net banking. GRAAS staff and chapters never collect membership fees in cash." },
+  { q: "What do I get the moment I am a member?", a: "A member number, a digital member ID with a QR code that anyone can verify, and a membership certificate. All three are in your account." },
+  { q: "Can I get a refund?", a: "In full if you are charged twice, if GRAAS declines your application, or if a payment does not activate your membership. A fee is not refunded once the membership is active. The Refund and cancellation policy has the details." },
+  { q: "Can my college or school start a chapter?", a: "Yes. Join as an institution, or as a student or faculty member, and tell us through the Help section of your account. A chapter needs a group of interested students and a faculty coordinator." },
+  { q: "We are a company. How do we take part?", a: "Join as an industry member. GRAAS verifies the company first. Industry members will be able to post jobs, internships and automation problems, and demonstrate at GRAAS events." },
 ];
 
 export default function Faq() {

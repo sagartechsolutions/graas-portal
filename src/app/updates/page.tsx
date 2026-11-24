@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PostCard } from "@/components/home/UpdatesPreview";
-import PreRegister from "@/components/home/PreRegister";
+import JoinBand from "@/components/home/JoinBand";
 import { getPosts } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Updates", description: "Announcements and news from the Global Robotics And Automation Society." };
@@ -24,7 +24,7 @@ export default async function Page() {
           </ul>
         )}
       </section>
-      <PreRegister />
+      <JoinBand />
     </>
   );
 }

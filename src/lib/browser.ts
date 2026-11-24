@@ -11,3 +11,16 @@ export function browserClient() {
   });
   return client;
 }
+
+export type PortalResult = { ok: boolean; error?: string; field?: string; [k: string]: unknown };
+
+/** Calls the server-side `portal` function (accounts, payments). Network trouble comes back as a plain message. */
+export async function portal(action: string, body: Record<string, unknown> = {}): Promise<PortalResult> {
+  try {
+    const { data, error } = await browserClient().functions.invoke("portal", { body: { action, ...body } });
+    if (error || !data) return { ok: false, error: "Could not reach the server. Check your internet and try again." };
+    return data as PortalResult;
+  } catch {
+    return { ok: false, error: "Could not reach the server. Check your internet and try again." };
+  }
+}

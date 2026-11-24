@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserClient } from "@/lib/browser";
 import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
+import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
+import { Members } from "./Members";
+import { Coupons, Gateway, Payments } from "./Money";
 
 type PlanRow = {
   id: string;
@@ -371,14 +374,15 @@ type Json = Record<string, unknown>;
 function Settings({ session }: { session: Session }) {
   const [org, setOrg] = useState<Json>({});
   const [con, setCon] = useState<Json>({});
+  const [mem, setMem] = useState<Json>({ signup_open: true });
   const [state, setState] = useState("");
   useEffect(() => {
     sb()
       .from("site_settings")
       .select("key,value")
-      .in("key", ["org", "graascon"])
+      .in("key", ["org", "graascon", "membership"])
       .then(({ data }) => {
-        for (const r of data ?? []) (r.key === "org" ? setOrg : setCon)(r.value as Json);
+        for (const r of data ?? []) (r.key === "org" ? setOrg : r.key === "membership" ? setMem : setCon)(r.value as Json);
       });
   }, []);
   const str = (o: Json, k: string) => (typeof o[k] === "string" ? (o[k] as string) : "");
@@ -389,7 +393,8 @@ function Settings({ session }: { session: Session }) {
     const stamp = { updated_by: session.user.id };
     const a = await sb().from("site_settings").update({ value: org, ...stamp }).eq("key", "org");
     const b = await sb().from("site_settings").update({ value: con, ...stamp }).eq("key", "graascon");
-    if (a.error || b.error) return setState(a.error?.message ?? b.error?.message ?? "Could not save.");
+    const c = await sb().from("site_settings").update({ value: mem, ...stamp }).eq("key", "membership");
+    if (a.error || b.error || c.error) return setState(a.error?.message ?? b.error?.message ?? c.error?.message ?? "Could not save.");
     await refreshSite(session);
     setState("Saved.");
   }
@@ -401,6 +406,17 @@ function Settings({ session }: { session: Session }) {
         <Field label="Official email" value={str(org, "email")} onChange={put(setOrg, "email")} />
         <Field label="Official phone" value={str(org, "phone")} onChange={put(setOrg, "phone")} />
         <Field label="Registered office address" value={str(org, "address")} onChange={put(setOrg, "address")} />
+        <Field label="Registration number (optional)" value={str(org, "registration_no")} onChange={put(setOrg, "registration_no")} />
+        <Field label="GSTIN (only if GRAAS is registered for GST)" value={str(org, "gstin")} onChange={put(setOrg, "gstin")} />
+        <p className="text-xs text-ink2">These appear on members' receipts.</p>
+      </div>
+      <div className="plate grid gap-3 p-5">
+        <h3 className="text-xl font-semibold">Membership</h3>
+        <label className="flex items-center gap-2.5 font-semibold">
+          <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={mem.signup_open !== false} onChange={(e) => setMem((m) => ({ ...m, signup_open: e.target.checked }))} />
+          New applications are open
+        </label>
+        <p className="text-xs text-ink2">Untick to pause new sign-ups. Existing members can still sign in, pay and renew.</p>
       </div>
       <div className="plate grid gap-3 p-5">
         <h3 className="text-xl font-semibold">GRAASCON</h3>
@@ -421,10 +437,18 @@ function Settings({ session }: { session: Session }) {
   );
 }
 
+const GROUPS: { title: string; items: [string, string][] }[] = [
+  { title: "Overview", items: [["dashboard", "Dashboard"]] },
+  { title: "Membership", items: [["members", "Members"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
+  { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"]] },
+  { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
+  { title: "System", items: [["staff", "Staff"], ["settings", "Settings"], ["activity", "Activity log"]] },
+];
+
 export default function AdminApp() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined);
-  const [tab, setTab] = useState<"leads" | "updates" | "gallery" | "plans" | "settings">("leads");
+  const [tab, setTab] = useState("dashboard");
 
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => setSession(data.session));
@@ -448,56 +472,106 @@ export default function AdminApp() {
     return (
       <section className="mx-auto max-w-xl px-5 py-20">
         <h1 className="h-section">No staff access</h1>
-        <p className="lede mt-4">{session.user.email} is signed in but has not been given a staff role. Ask the GRAAS super admin to add you.</p>
-        <button type="button" className="btn btn-quiet mt-6" onClick={() => sb().auth.signOut()}>
-          Sign out
-        </button>
+        <p className="lede mt-4">{session.user.email} is signed in but has no staff role. Members use My account instead.</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a href="/account" className="btn btn-go">
+            Go to My account
+          </a>
+          <button type="button" className="btn btn-quiet" onClick={() => sb().auth.signOut()}>
+            Sign out
+          </button>
+        </div>
       </section>
     );
 
-  const canPrice = role === "super_admin" || role === "finance";
-  const canPost = role === "super_admin" || role === "communications";
-  const tabs = [
-    { id: "leads", label: "Pre-registrations", show: true },
-    { id: "updates", label: "Updates", show: canPost },
-    { id: "gallery", label: "Gallery", show: canPost },
-    { id: "plans", label: "Membership fees", show: canPrice },
-    { id: "settings", label: "Settings", show: role === "super_admin" },
-  ] as const;
+  const is = (...roles: string[]) => role === "super_admin" || roles.includes(role);
+  const allowed: Record<string, boolean> = {
+    dashboard: true,
+    members: true,
+    payments: is("finance", "membership_desk", "support"),
+    plans: is("finance"),
+    coupons: true,
+    gateway: role === "super_admin",
+    updates: is("communications"),
+    gallery: is("communications"),
+    policies: is("communications"),
+    leads: true,
+    helpdesk: is("support", "membership_desk"),
+    staff: role === "super_admin",
+    settings: role === "super_admin",
+    activity: role === "super_admin",
+  };
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([id]) => allowed[id]) })).filter((g) => g.items.length);
+  const current = allowed[tab] ? tab : "dashboard";
+  const title = GROUPS.flatMap((g) => g.items).find(([id]) => id === current)?.[1];
 
   return (
-    <section className="shell py-10">
+    <section className="shell py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="h-section !text-4xl">GRAAS admin</h1>
-          <p className="mt-1 text-sm text-ink2">
-            {session.user.email} · {role.replace("_", " ")}
+          <p className="text-sm text-ink2">
+            GRAAS admin, {session.user.email}, {role.replace("_", " ")}
           </p>
+          <h1 className="h-section !text-[clamp(1.8rem,1.3rem+1.6vw,2.6rem)]">{title}</h1>
         </div>
-        <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => sb().auth.signOut()}>
-          Sign out
-        </button>
-      </div>
-      <div role="tablist" className="mt-7 flex flex-wrap gap-2 border-b border-line pb-4">
-        {tabs.filter((t) => t.show).map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            type="button"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={`min-h-10 rounded-full border px-4 py-1.5 font-semibold ${tab === t.id ? "border-ink bg-ink text-white" : "border-line bg-surface hover:border-ink"}`}
-          >
-            {t.label}
+        <div className="flex flex-wrap gap-2">
+          <a href="/account" className="btn btn-quiet !min-h-10 !py-2">
+            My account
+          </a>
+          <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => sb().auth.signOut()}>
+            Sign out
           </button>
-        ))}
+        </div>
       </div>
-      <div className="pt-7">
-        {tab === "leads" && <Leads canEdit={["super_admin", "support", "communications", "membership_desk"].includes(role)} />}
-        {tab === "updates" && canPost && <Updates session={session} />}
-        {tab === "gallery" && canPost && <Gallery session={session} />}
-        {tab === "plans" && canPrice && <Plans session={session} />}
-        {tab === "settings" && role === "super_admin" && <Settings session={session} />}
+      <div className="mt-6 grid gap-8 lg:grid-cols-[14.5rem_minmax(0,1fr)]">
+        <nav aria-label="Admin sections">
+          <label className="grid gap-1 text-sm font-semibold lg:hidden">
+            Section
+            <select className="field" value={current} onChange={(e) => setTab(e.target.value)}>
+              {groups.map((g) => (
+                <optgroup key={g.title} label={g.title}>
+                  {g.items.map(([id, label]) => (
+                    <option key={id} value={id}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <div className="sticky top-24 hidden gap-5 lg:grid">
+            {groups.map((g) => (
+              <div key={g.title}>
+                <p className="px-3 text-xs font-semibold text-ink2">{g.title}</p>
+                <ul className="mt-1 grid gap-0.5">
+                  {g.items.map(([id, label]) => (
+                    <li key={id}>
+                      <button type="button" aria-current={current === id ? "page" : undefined} onClick={() => setTab(id)} className={`w-full rounded-xl px-3 py-2 text-left text-[0.95rem] font-medium transition-colors ${current === id ? "bg-ink text-white" : "hover:bg-cobalt-soft"}`}>
+                        {label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </nav>
+        <div className="min-w-0">
+          {current === "dashboard" && <Dashboard go={setTab} />}
+          {current === "members" && <Members role={role} />}
+          {current === "payments" && <Payments role={role} />}
+          {current === "plans" && <Plans session={session} />}
+          {current === "coupons" && <Coupons role={role} session={session} />}
+          {current === "gateway" && <Gateway session={session} />}
+          {current === "updates" && <Updates session={session} />}
+          {current === "gallery" && <Gallery session={session} />}
+          {current === "policies" && <Policies session={session} />}
+          {current === "leads" && <Leads canEdit={is("support", "communications", "membership_desk")} />}
+          {current === "helpdesk" && <Helpdesk session={session} />}
+          {current === "staff" && <Staff session={session} />}
+          {current === "settings" && <Settings session={session} />}
+          {current === "activity" && <Activity />}
+        </div>
       </div>
     </section>
   );

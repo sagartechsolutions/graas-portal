@@ -9,7 +9,7 @@ export default function Page() {
     <InfoPage
       title="Membership"
       intro="Anyone can open a free account. Membership makes you a verified part of the society, with an ID, a certificate and member pricing."
-      status="Membership opens soon"
+      status="Membership is open"
       interest="membership"
       blocks={[
         { heading: "Free account", points: ["Attend open lectures", "Follow events and announcements", "Collect participation certificates"] },

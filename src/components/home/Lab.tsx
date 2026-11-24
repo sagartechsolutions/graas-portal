@@ -11,7 +11,7 @@ const TONES = ["#b7babf", "#8e919a", "#5a616b", "#000e21"];
 function Shell({ stage, children }: { stage: ReactNode; children: ReactNode }) {
   return (
     <div className="grid lg:grid-cols-[1.5fr_1fr]">
-      <div className="grid-faint relative min-h-[320px] border-b border-line bg-mist sm:min-h-[400px] lg:min-h-[460px] lg:border-b-0 lg:border-r">{stage}</div>
+      <div className="grid-faint relative min-h-[320px] border-b border-line bg-mist sm:min-h-[400px] lg:min-h-[460px] lg:border-b-0 lg:border-r 2xl:min-h-[580px]">{stage}</div>
       <div className="flex flex-col p-6 sm:p-8">{children}</div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { cacheLife, cacheTag } from "next/cache";
+import { POLICY_DEFAULTS, type Policy } from "./policy-defaults";
 import type { Plan } from "./site";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -107,4 +108,27 @@ export async function getGallery(limit = 60): Promise<GalleryItem[]> {
   } catch {
     return [];
   }
+}
+
+
+/** Policies: the text saved by staff in admin, or the starting text when nothing has been saved for that policy. */
+export async function getPolicies(): Promise<Policy[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("policies");
+  let saved: Policy[] = [];
+  try {
+    const { data } = await publicClient().from("policies").select("slug,title,summary,body,effective_on").eq("is_published", true);
+    saved = (data ?? []) as Policy[];
+  } catch {
+    saved = [];
+  }
+  const bySlug = new Map(saved.map((p) => [p.slug, p]));
+  const known = POLICY_DEFAULTS.map((d) => bySlug.get(d.slug) ?? d);
+  const extra = saved.filter((p) => !POLICY_DEFAULTS.some((d) => d.slug === p.slug));
+  return [...known, ...extra];
+}
+
+export async function getPolicy(slug: string): Promise<Policy | null> {
+  return (await getPolicies()).find((p) => p.slug === slug) ?? null;
 }

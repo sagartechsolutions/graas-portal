@@ -3,9 +3,10 @@ import { ORG, PROGRAMS } from "@/lib/site";
 import Logo from "./Logo";
 
 const cols = [
-  { title: "Membership", links: [{ href: "/membership", label: "Plans and benefits" }, { href: "/#join", label: "Become a member" }, { href: "/chapters", label: "Start a chapter" }] },
+  { title: "Membership", links: [{ href: "/membership", label: "Plans and benefits" }, { href: "/join", label: "Become a member" }, { href: "/signin", label: "Sign in" }, { href: "/verify", label: "Verify a member" }] },
   { title: "Programs", links: PROGRAMS.map((p) => ({ href: p.href, label: p.label })).concat([{ href: "/graascon", label: "GRAASCON" }]) },
   { title: "Society", links: [{ href: "/about", label: "About GRAAS" }, { href: "/updates", label: "Updates" }, { href: "/gallery", label: "Gallery" }, { href: "/contact", label: "Contact" }] },
+  { title: "Rules and policies", links: [{ href: "/policies/membership-rules", label: "Membership rules" }, { href: "/policies/code-of-conduct", label: "Code of conduct" }, { href: "/policies/refund-policy", label: "Refunds" }, { href: "/policies/terms", label: "Terms of use" }, { href: "/policies/privacy", label: "Privacy" }] },
 ];
 
 export default function Footer() {
@@ -15,11 +16,11 @@ export default function Footer() {
         <div>
           <Logo tone="light" full />
           <p className="mt-6 max-w-sm text-white/70">A society for people who learn, teach, build and hire in robotics and automation.</p>
-          <Link href="/#join" className="btn btn-light mt-7">
+          <Link href="/join" className="btn btn-light mt-7">
             Become a member
           </Link>
         </div>
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {cols.map((c) => (
             <div key={c.title}>
               <p className="text-sm font-semibold text-white/55">{c.title}</p>
@@ -41,8 +42,8 @@ export default function Footer() {
           <p>
             © {2026} {ORG.name}
           </p>
-          <Link href="/privacy" className="hover:text-white">
-            Privacy
+          <Link href="/admin" className="hover:text-white">
+            Staff sign-in
           </Link>
         </div>
       </div>
