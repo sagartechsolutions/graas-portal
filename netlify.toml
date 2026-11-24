@@ -15,3 +15,10 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# The Netlify address forwards to the real domain, so there is one address for members, sign-ins and QR codes.
+[[redirects]]
+  from = "https://graas-portal.netlify.app/*"
+  to = "https://graas.org.in/:splat"
+  status = 301
+  force = true
