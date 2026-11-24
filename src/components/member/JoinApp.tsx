@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { browserClient, portal } from "@/lib/browser";
 import { INDIAN_STATES, inr } from "@/lib/money";
 import type { Plan } from "@/lib/site";
+import { Alert, CodeForm } from "./Verify";
 
 const ORG_LABEL: Record<string, string> = { student: "College or institute", professional: "Company or organisation", institution: "Name of the institution", industry: "Name of the company" };
 const ROLE_LABEL: Record<string, string> = { student: "Course and year", professional: "Designation", institution: "Your designation there", industry: "Your designation there" };
@@ -25,6 +26,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ field?: string; error: string } | null>(null);
+  const [verify, setVerify] = useState<{ email: string; sent: boolean } | null>(null);
   const plan = useMemo(() => plans.find((p) => p.code === code) ?? plans[0], [plans, code]);
   const individual = plan?.audience === "student" || plan?.audience === "professional";
 
@@ -79,7 +81,14 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
       return setBusy(false);
     }
     const { error } = await sb.auth.signInWithPassword({ email: v("email"), password: String(f.get("password") ?? "") });
-    router.push(error ? "/signin" : "/account?welcome=1");
+    if (error) return router.push("/signin");
+    if (res.verify === "email") {
+      setVerify({ email: v("email").toLowerCase(), sent: res.sent !== false });
+      setBusy(false);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    router.push("/account?welcome=1");
   }
 
   const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
@@ -88,6 +97,30 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
       <section className="shell py-24">
         <h1 className="h-section">Membership plans are being prepared.</h1>
         <p className="lede mt-4">Please check back shortly.</p>
+      </section>
+    );
+
+  if (verify)
+    return (
+      <section className="bg-mist">
+        <div className="mx-auto w-full max-w-xl px-5 py-14 sm:py-20">
+          <p className="text-sm font-semibold text-go-deep">Account created, application saved</p>
+          <h1 className="h-section mt-2">Check your email</h1>
+          <p className="lede mt-3">
+            We sent a 6-digit code to <strong className="break-all text-ink">{verify.email}</strong>. Type it below to confirm your email address. If it is not in your inbox, look in Spam or Promotions.
+          </p>
+          <div className="card mt-8 grid gap-5 p-6 shadow-[var(--shadow-card)] sm:p-8">
+            {!verify.sent && <Alert tone="info">The first email could not be sent. Press Send a new code.</Alert>}
+            <CodeForm purpose="verify_email" sent={verify.sent} submitLabel="Confirm email" onDone={() => router.push("/account?welcome=1")} />
+          </div>
+          <p className="mt-6 text-[0.95rem] text-ink2">
+            Typed the wrong email?{" "}
+            <Link href="/account" className="font-semibold underline decoration-go decoration-2 underline-offset-4">
+              Go to your account
+            </Link>{" "}
+            and change it under Profile. You can also confirm later, but you need a confirmed email before paying.
+          </p>
+        </div>
       </section>
     );
 

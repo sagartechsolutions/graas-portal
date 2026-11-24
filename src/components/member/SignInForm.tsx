@@ -52,13 +52,9 @@ export default function SignInForm() {
           <button className="btn btn-primary" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
-          <p className="text-sm text-ink2">
-            Forgot your password? Write to us from the{" "}
-            <Link href="/contact" className="font-semibold underline decoration-go decoration-2 underline-offset-4">
-              Contact page
-            </Link>{" "}
-            with your registered mobile number. After checking it is you, staff will set a temporary password.
-          </p>
+          <Link href="/forgot" className="justify-self-start text-[0.95rem] font-semibold underline decoration-go decoration-2 underline-offset-4">
+            Forgot your password?
+          </Link>
         </form>
         <p className="mt-6 text-ink2">
           Not a member yet?{" "}

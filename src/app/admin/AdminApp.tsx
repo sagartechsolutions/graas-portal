@@ -7,6 +7,7 @@ import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
 import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
 import { Members } from "./Members";
+import { Broadcast, Messages } from "./Messages";
 import { Coupons, Gateway, Payments } from "./Money";
 
 type PlanRow = {
@@ -83,6 +84,9 @@ function SignIn() {
           <button className="btn btn-go justify-self-start" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          <a href="/forgot" className="justify-self-start text-[0.95rem] font-semibold underline decoration-go decoration-2 underline-offset-4">
+            Forgot your password?
+          </a>
         </form>
       </div>
     </section>
@@ -442,6 +446,7 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Membership", items: [["members", "Members"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
   { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
+  { title: "Messages", items: [["messages", "Email and WhatsApp"], ["broadcast", "Send an update"]] },
   { title: "System", items: [["staff", "Staff"], ["settings", "Settings"], ["activity", "Activity log"]] },
 ];
 
@@ -449,6 +454,7 @@ export default function AdminApp() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined);
   const [tab, setTab] = useState("dashboard");
+  const [prefill, setPrefill] = useState<{ subject: string; body: string } | null>(null);
 
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => setSession(data.session));
@@ -497,6 +503,8 @@ export default function AdminApp() {
     policies: is("communications"),
     leads: true,
     helpdesk: is("support", "membership_desk"),
+    messages: is("communications", "support", "membership_desk"),
+    broadcast: is("communications"),
     staff: role === "super_admin",
     settings: role === "super_admin",
     activity: role === "super_admin",
@@ -563,7 +571,15 @@ export default function AdminApp() {
           {current === "plans" && <Plans session={session} />}
           {current === "coupons" && <Coupons role={role} session={session} />}
           {current === "gateway" && <Gateway session={session} />}
-          {current === "updates" && <Updates session={session} />}
+          {current === "updates" && (
+            <Updates
+              session={session}
+              onShare={(p) => {
+                setPrefill(p);
+                setTab("broadcast");
+              }}
+            />
+          )}
           {current === "gallery" && <Gallery session={session} />}
           {current === "policies" && <Policies session={session} />}
           {current === "leads" && <Leads canEdit={is("support", "communications", "membership_desk")} />}
@@ -571,6 +587,8 @@ export default function AdminApp() {
           {current === "staff" && <Staff session={session} />}
           {current === "settings" && <Settings session={session} />}
           {current === "activity" && <Activity />}
+          {current === "messages" && <Messages role={role} />}
+          {current === "broadcast" && <Broadcast key={prefill?.subject ?? "new"} prefill={prefill} onSent={() => setPrefill(null)} />}
         </div>
       </div>
     </section>

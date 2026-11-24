@@ -159,7 +159,7 @@ function PostEditor({ draft, session, onDone }: { draft: Draft; session: Session
   );
 }
 
-export function Updates({ session }: { session: Session }) {
+export function Updates({ session, onShare }: { session: Session; onShare?: (p: { subject: string; body: string }) => void }) {
   const [rows, setRows] = useState<PostRow[]>([]);
   const [edit, setEdit] = useState<Draft | null>(null);
   const [ask, setAsk] = useState<string | null>(null);
@@ -245,6 +245,15 @@ export function Updates({ session }: { session: Session }) {
                 <button type="button" className="btn btn-quiet !min-h-9 !px-3 !py-1" onClick={() => toggle(r)}>
                   {r.is_published ? "Hide" : "Show"}
                 </button>
+                {onShare && r.is_published && (
+                  <button
+                    type="button"
+                    className="btn btn-quiet !min-h-9 !px-3 !py-1"
+                    onClick={() => onShare({ subject: r.title, body: `${r.summary ?? ""}\n\n[Read the full update](https://graas.org.in/updates/${r.slug})`.trim() })}
+                  >
+                    Email to members
+                  </button>
+                )}
                 <button type="button" className="btn btn-quiet !min-h-9 !px-3 !py-1" onClick={() => setAsk(r.id)}>
                   Delete
                 </button>

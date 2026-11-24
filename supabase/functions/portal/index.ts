@@ -1,7 +1,20 @@
-// GRAAS portal server actions: member accounts, Razorpay orders and refunds, staff account tools.
+// GRAAS portal server actions: member accounts, verification codes, Razorpay orders and refunds, staff tools.
 // Runs inside Supabase with the service key. It never returns a secret and never logs a request body.
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  deliver,
+  emailReady,
+  graph,
+  graphError,
+  loadMessaging,
+  metaTemplate,
+  nowIST,
+  waReady,
+  waTemplateReady,
+  type Messaging,
+  type Sent,
+} from "../_shared/messaging.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -60,6 +73,48 @@ async function settle(g: any, rzpOrderId: string) {
   return !!s.data?.ok;
 }
 
+const firstName = (n: unknown) => String(n ?? "").trim().split(/\s+/)[0] || "there";
+const normEmail = (v: unknown) => String(v ?? "").trim().toLowerCase().slice(0, 160);
+const isEmail = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v);
+const mobile = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-10);
+const isMobile = (v: string) => /^[6-9][0-9]{9}$/.test(v);
+const maskEmail = (e: string) => e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + "*".repeat(Math.min(Math.max(b.length, 2), 6)) + c);
+const maskPhone = (p: string) => "+91 ***** " + p.slice(-5);
+const profileOf = async (id: string) => (await admin.from("profiles").select("*").eq("id", id).maybeSingle()).data as any;
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Creates a six-digit code, sends it, and logs the message with the code hidden. */
+async function sendCode(
+  m: Messaging,
+  o: { purpose: string; channel: "email" | "whatsapp"; target: string; user: string | null; ip: string; event: string; name: string },
+): Promise<{ ok: boolean; error?: string; minutes?: number; wait?: number }> {
+  const c = await admin.rpc("svc_issue_code", { p_purpose: o.purpose, p_channel: o.channel, p_target: o.target, p_user: o.user, p_ip_hash: o.ip });
+  if (c.error) return { ok: false, error: "Could not create a code. Please try again." };
+  if (!c.data?.ok) return c.data;
+  const code = String(c.data.code);
+  const vars = { name: o.name, code, minutes: String(c.data.minutes) };
+  const r: Sent = await deliver(m, o.event, o.channel, o.target, vars);
+  await admin.rpc("svc_log_message", {
+    p_user: o.user,
+    p_event: o.event,
+    p_channel: o.channel,
+    p_to: o.target,
+    p_vars: { ...vars, code: "******" },
+    p_ok: r.ok,
+    p_provider_id: r.id ?? null,
+    p_error: r.ok ? null : r.error ?? null,
+    p_subject: r.subject ? r.subject.split(code).join("******") : null,
+    p_actor: null,
+  });
+  if (!r.ok) {
+    return {
+      ok: false,
+      error: o.channel === "email" ? "We could not send the email just now. Please try again in a minute." : "We could not send the WhatsApp message just now. Please try again in a minute.",
+    };
+  }
+  return { ok: true, minutes: c.data.minutes };
+}
+
 const STAFF_ROLES = ["super_admin", "membership_desk", "chapter_manager", "event_manager", "finance", "communications", "support", "regional_coordinator", "moderator"];
 const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -81,6 +136,7 @@ Deno.serve(async (req) => {
   const asUser = () => createClient(SB_URL, req.headers.get("apikey") ?? ANON, { ...noSession, global: { headers: { Authorization: `Bearer ${token}` } } });
   const audit = (action: string, entity: string, entity_id: string, detail: Record<string, unknown> = {}) =>
     admin.from("audit_log").insert({ actor: user?.id ?? null, action, entity, entity_id, detail });
+  const ipHash = () => sha((req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() + "|graas");
 
   switch (b?.action) {
     case "health":
@@ -104,8 +160,8 @@ Deno.serve(async (req) => {
       };
       const password = String(b.password ?? "");
       if (password.length < 8 || password.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
-      const ipHash = await sha((req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() + "|graas");
-      const chk = await admin.rpc("svc_signup_check", { p_data: d, p_ip_hash: ipHash });
+      const ip = await ipHash();
+      const chk = await admin.rpc("svc_signup_check", { p_data: d, p_ip_hash: ip });
       if (chk.error) return fail("Could not check the application. Please try again.");
       if (!chk.data?.ok) return out(chk.data);
       const made = await admin.auth.admin.createUser({
@@ -122,16 +178,30 @@ Deno.serve(async (req) => {
       }
       // A website sign-up must never end up with staff rights.
       const leaked = (await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data;
-      const done = leaked ? null : await admin.rpc("svc_signup", { p_user: id, p_data: d, p_ip_hash: ipHash });
+      const done = leaked ? null : await admin.rpc("svc_signup", { p_user: id, p_data: d, p_ip_hash: ip });
       if (!done || done.error || !done.data?.ok) {
         await admin.auth.admin.deleteUser(id);
         return out(done?.data ?? { ok: false, error: "Could not save the application. Please try again." });
       }
-      return out({ ok: true });
+      // Email confirmation: the code goes out now, and the member types it on the next screen.
+      const m = await loadMessaging(admin);
+      if (!emailReady(m)) return out({ ok: true, verify: null });
+      const sent = await sendCode(m, { purpose: "verify_email", channel: "email", target: d.email, user: id, ip, event: "code_verify_email", name: firstName(d.full_name) });
+      return out({ ok: true, verify: "email", sent: sent.ok, sent_to: d.email, minutes: sent.minutes ?? 10 });
     }
 
     case "create_order": {
       if (!user) return fail("Please sign in again.");
+      {
+        const m = await loadMessaging(admin);
+        const p = await profileOf(user.id);
+        if (emailReady(m) && (m.verify?.email_required ?? true) && !p?.email_verified_at) {
+          return fail("Confirm your email before paying. Use the code we sent you, or ask for a new one at the top of this page.", { need: "email" });
+        }
+        if (waTemplateReady(m, "code_verify_phone") && m.verify?.phone_required && !p?.phone_verified_at) {
+          return fail("Confirm your WhatsApp number before paying. You can do it at the top of this page.", { need: "phone" });
+        }
+      }
       const g = await gateway();
       const o = await admin.rpc("svc_new_order", { p_user: user.id, p_coupon: b.coupon ? text(b.coupon, 20) : null, p_can_charge: ready(g) });
       if (o.error) return fail("Could not start the payment. Please try again.");
@@ -208,6 +278,7 @@ Deno.serve(async (req) => {
       const r = await admin.auth.admin.updateUserById(target, { password: pw });
       if (r.error) return fail("Could not reset the password.");
       await audit("password_reset", "profiles", target);
+      await admin.rpc("svc_enqueue", { p_user: target, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
       return out({ ok: true });
     }
 
@@ -226,6 +297,7 @@ Deno.serve(async (req) => {
         await admin.auth.admin.deleteUser(id);
         return fail("Could not save the staff role.");
       }
+      await admin.rpc("svc_mark_verified", { p_user: id, p_kind: "email" });
       await audit("staff_created", "staff_members", id, { email, role: b.role });
       return out({ ok: true });
     }
@@ -240,6 +312,225 @@ Deno.serve(async (req) => {
       if (r.error) return fail("Could not delete the account.");
       await audit("account_deleted", "profiles", target, { email: p?.email ?? null, name: p?.full_name ?? null });
       return out({ ok: true });
+    }
+
+    case "send_code": {
+      const purpose = String(b.purpose ?? "");
+      const m = await loadMessaging(admin);
+      const ip = await ipHash();
+
+      if (purpose === "verify_email") {
+        if (!user) return fail("Please sign in again.");
+        const p = await profileOf(user.id);
+        if (p?.email_verified_at) return out({ ok: true, already: true });
+        if (!emailReady(m)) return fail("Email confirmation is not switched on yet.");
+        const r = await sendCode(m, { purpose, channel: "email", target: normEmail(p.email), user: user.id, ip, event: "code_verify_email", name: firstName(p.full_name) });
+        return out({ ...r, sent_to: p.email });
+      }
+
+      if (purpose === "verify_phone") {
+        if (!user) return fail("Please sign in again.");
+        const p = await profileOf(user.id);
+        if (!p?.phone) return fail("Add your mobile number in Profile first.");
+        if (p.phone_verified_at) return out({ ok: true, already: true });
+        if (!waTemplateReady(m, "code_verify_phone")) return fail("WhatsApp confirmation is not switched on yet.");
+        const r = await sendCode(m, { purpose, channel: "whatsapp", target: "91" + p.phone, user: user.id, ip, event: "code_verify_phone", name: firstName(p.full_name) });
+        return out({ ...r, sent_to: maskPhone(p.phone) });
+      }
+
+      if (purpose === "change_email") {
+        if (!user) return fail("Please sign in again.");
+        const p = await profileOf(user.id);
+        const email = normEmail(b.email);
+        if (!isEmail(email)) return fail("Enter a valid email address.", { field: "email" });
+        if (email === normEmail(p?.email)) return fail("This is already your email.", { field: "email" });
+        if (!emailReady(m)) return fail("Email changes need email sending, which is not switched on yet. Write to us from Help instead.");
+        if ((await admin.rpc("svc_email_taken", { p_email: email, p_user: user.id })).data) return fail("Another GRAAS account already uses this email.", { field: "email" });
+        const r = await sendCode(m, { purpose, channel: "email", target: email, user: user.id, ip, event: "code_change_email", name: firstName(p?.full_name) });
+        return out({ ...r, sent_to: email });
+      }
+
+      if (purpose === "reset_password") {
+        const email = b.email ? normEmail(b.email) : "";
+        const phone = !email && b.phone ? mobile(b.phone) : "";
+        if (email && !isEmail(email)) return fail("Enter a valid email address.", { field: "email" });
+        if (!email && !isMobile(phone)) return fail("Enter your email address or your 10-digit mobile number.", { field: "email" });
+        if (email && !emailReady(m)) return fail("Password reset by email is not available yet. Write to connect@graas.org.in and we will help.");
+        if (phone && !waTemplateReady(m, "code_reset_password")) return fail("Codes on WhatsApp are not available yet. Use your email address instead.");
+        const shown = email ? maskEmail(email) : maskPhone(phone);
+        const acc = (await admin.rpc("svc_find_account", { p_email: email || null, p_phone: phone || null })).data;
+        if (!acc?.user_id) {
+          // Same answer whether or not an account exists, so nobody can test which emails are registered.
+          await pause(600 + Math.floor(Math.random() * 500));
+          return out({ ok: true, sent_to: shown, channel: email ? "email" : "whatsapp", minutes: 10 });
+        }
+        const p = await profileOf(acc.user_id);
+        const r = await sendCode(m, {
+          purpose,
+          channel: email ? "email" : "whatsapp",
+          target: email || "91" + phone,
+          user: acc.user_id,
+          ip,
+          event: "code_reset_password",
+          name: firstName(p?.full_name),
+        });
+        return out({ ...r, sent_to: shown, channel: email ? "email" : "whatsapp" });
+      }
+      return fail("Unknown request.");
+    }
+
+    case "verify_code": {
+      const purpose = String(b.purpose ?? "");
+      const code = String(b.code ?? "").replace(/\D/g, "").slice(0, 6);
+      if (code.length !== 6) return fail("Enter the 6-digit code.", { field: "code" });
+      if (!user) return fail("Please sign in again.");
+      const p = await profileOf(user.id);
+
+      if (purpose === "verify_email" || purpose === "verify_phone") {
+        const target = purpose === "verify_email" ? normEmail(p?.email) : "91" + (p?.phone ?? "");
+        const c = await admin.rpc("svc_check_code", { p_purpose: purpose, p_target: target, p_code: code });
+        if (c.error || !c.data?.ok) return out(c.data ?? { ok: false, error: "Could not check the code. Please try again." });
+        const v = await admin.rpc("svc_mark_verified", { p_user: user.id, p_kind: purpose === "verify_email" ? "email" : "phone" });
+        return out(v.data ?? { ok: false, error: "Could not save. Please try again." });
+      }
+
+      if (purpose === "change_email") {
+        const email = normEmail(b.email);
+        if (!isEmail(email)) return fail("Enter a valid email address.", { field: "email" });
+        const c = await admin.rpc("svc_check_code", { p_purpose: purpose, p_target: email, p_code: code });
+        if (c.error || !c.data?.ok) return out(c.data ?? { ok: false, error: "Could not check the code. Please try again." });
+        if (c.data.user_id !== user.id) return fail("This code was not sent for your account.");
+        if ((await admin.rpc("svc_email_taken", { p_email: email, p_user: user.id })).data) return fail("Another GRAAS account already uses this email.");
+        const old = normEmail(p?.email);
+        const u = await admin.auth.admin.updateUserById(user.id, { email, email_confirm: true });
+        if (u.error) return fail("Could not change the email. Please try again.");
+        await admin.rpc("svc_set_email", { p_user: user.id, p_email: email });
+        await audit("email_changed", "profiles", user.id, { from: old, to: email });
+        if (old) {
+          const m = await loadMessaging(admin);
+          const vars = { name: firstName(p?.full_name), new_email: email, when: nowIST() };
+          const r = await deliver(m, "email_changed", "email", old, vars);
+          await admin.rpc("svc_log_message", { p_user: user.id, p_event: "email_changed", p_channel: "email", p_to: old, p_vars: vars, p_ok: r.ok, p_provider_id: r.id ?? null, p_error: r.ok ? null : r.error ?? null, p_subject: r.subject ?? null, p_actor: user.id });
+        }
+        return out({ ok: true, email });
+      }
+      return fail("Unknown request.");
+    }
+
+    case "reset_password": {
+      const email = b.email ? normEmail(b.email) : "";
+      const phone = !email && b.phone ? mobile(b.phone) : "";
+      const code = String(b.code ?? "").replace(/\D/g, "").slice(0, 6);
+      const pw = String(b.password ?? "");
+      if (code.length !== 6) return fail("Enter the 6-digit code.", { field: "code" });
+      if (pw.length < 8 || pw.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
+      if (!email && !isMobile(phone)) return fail("Start again and enter your email or mobile number.");
+      const acc = (await admin.rpc("svc_find_account", { p_email: email || null, p_phone: phone || null })).data;
+      if (!acc?.user_id) {
+        await pause(400);
+        return fail("That code is not right. Check it and try again.", { field: "code" });
+      }
+      const c = await admin.rpc("svc_check_code", { p_purpose: "reset_password", p_target: email || "91" + phone, p_code: code });
+      if (c.error || !c.data?.ok) return out({ ...(c.data ?? { ok: false, error: "Could not check the code. Please try again." }), field: "code" });
+      if (c.data.user_id !== acc.user_id) return fail("That code is not right. Check it and try again.", { field: "code" });
+      const u = await admin.auth.admin.updateUserById(acc.user_id, { password: pw });
+      if (u.error) return fail("Could not change the password. Please try again.");
+      if (email) await admin.rpc("svc_mark_verified", { p_user: acc.user_id, p_kind: "email" });
+      await admin.rpc("svc_enqueue", { p_user: acc.user_id, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
+      await admin.from("audit_log").insert({ actor: acc.user_id, action: "password_reset_by_code", entity: "profiles", entity_id: acc.user_id, detail: { via: email ? "email" : "whatsapp" } });
+      return out({ ok: true, email: acc.email });
+    }
+
+    case "change_password": {
+      if (!user?.email) return fail("Please sign in again.");
+      const current = String(b.current ?? "");
+      const pw = String(b.password ?? "");
+      if (pw.length < 8 || pw.length > 72) return fail("Choose a new password of at least 8 characters.", { field: "password" });
+      if (pw === current) return fail("The new password must be different from the current one.", { field: "password" });
+      const check = createClient(SB_URL, ANON, noSession);
+      const s = await check.auth.signInWithPassword({ email: user.email, password: current });
+      if (s.error || !s.data?.session) return fail("Your current password is not right.", { field: "current" });
+      await check.auth.signOut();
+      const u = await admin.auth.admin.updateUserById(user.id, { password: pw });
+      if (u.error) return fail("Could not change the password. Please try again.");
+      await admin.rpc("svc_enqueue", { p_user: user.id, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
+      await audit("password_changed", "profiles", user.id);
+      return out({ ok: true });
+    }
+
+    case "msg_test": {
+      if (!is("communications")) return fail("Your role cannot send tests.");
+      const m0 = await loadMessaging(admin);
+      const channel = b.channel === "whatsapp" ? "whatsapp" : "email";
+      let r: Sent;
+      let to: string;
+      if (channel === "email") {
+        to = normEmail(b.to);
+        if (!isEmail(to)) return fail("Enter the email address to send the test to.");
+        if (!m0.brevo_key) return fail("Save the Brevo API key first.");
+        // A test works before email is switched on, so the settings can be checked first.
+        const m = { ...m0, email: { ...m0.email, enabled: true } };
+        r = await deliver(m, "test", "email", to, { name: "there" });
+      } else {
+        const ph = mobile(b.to);
+        if (!isMobile(ph)) return fail("Enter the 10-digit mobile number to send the test to.");
+        to = "91" + ph;
+        if (!m0.wa_token || !m0.whatsapp?.phone_number_id) return fail("Save the Phone number ID and access token first.");
+        // hello_world is the sample template Meta places in every WhatsApp Business account.
+        const g = await graph(m0, "POST", `${m0.whatsapp.phone_number_id}/messages`, {
+          messaging_product: "whatsapp",
+          to,
+          type: "template",
+          template: { name: "hello_world", language: { code: "en_US" } },
+        });
+        r = g.ok ? { ok: true, id: g.j?.messages?.[0]?.id ?? null, subject: "hello_world" } : { ok: false, error: graphError(g) };
+      }
+      await admin.rpc("svc_log_message", { p_user: null, p_event: "test", p_channel: channel, p_to: to, p_vars: {}, p_ok: r.ok, p_provider_id: r.id ?? null, p_error: r.ok ? null : r.error ?? null, p_subject: r.subject ?? null, p_actor: user.id });
+      return r.ok ? out({ ok: true }) : fail(r.error ?? "Not sent.");
+    }
+
+    case "wa_sync": {
+      if (role !== "super_admin") return fail("Only a super admin can do this.");
+      const m = await loadMessaging(admin);
+      const waba = m.whatsapp?.waba_id;
+      if (!m.wa_token || !waba) return fail("Save the WhatsApp Business Account ID and the access token first.");
+      const list = await graph(m, "GET", `${waba}/message_templates?fields=name,status,category,language,rejected_reason&limit=250`);
+      if (!list.ok) return fail(graphError(list));
+      const have = new Map<string, any>();
+      for (const t of list.j?.data ?? []) have.set(`${t.name}|${t.language}`, t);
+      const rows = (m.templates ?? []).filter((t) => t.channel === "whatsapp" && t.wa_name);
+      const created: string[] = [];
+      const errors: string[] = [];
+      if (b.create) {
+        const seen = new Set<string>();
+        for (const t of rows) {
+          const key = `${t.wa_name}|${t.wa_lang || "en"}`;
+          if (have.has(key) || seen.has(key)) continue;
+          seen.add(key);
+          if (!t.enabled && t.wa_category === "MARKETING") continue;
+          const r = await graph(m, "POST", `${waba}/message_templates`, metaTemplate(t));
+          if (r.ok) {
+            created.push(t.wa_name!);
+            have.set(key, { name: t.wa_name, status: r.j?.status ?? "PENDING", category: r.j?.category ?? t.wa_category });
+          } else errors.push(`${t.wa_name}: ${graphError(r)}`);
+        }
+      }
+      for (const t of rows) {
+        const st = have.get(`${t.wa_name}|${t.wa_lang || "en"}`)?.status ?? null;
+        if (st !== t.wa_status) await admin.from("message_templates").update({ wa_status: st }).eq("event", t.event).eq("channel", "whatsapp");
+      }
+      let phone: any = null;
+      if (m.whatsapp?.phone_number_id) {
+        const ph = await graph(m, "GET", `${m.whatsapp.phone_number_id}?fields=display_phone_number,verified_name,name_status,quality_rating,code_verification_status,messaging_limit_tier`);
+        phone = ph.ok ? ph.j : { error: graphError(ph) };
+      }
+      const statuses = [...new Map(rows.map((t) => [t.wa_name, have.get(`${t.wa_name}|${t.wa_lang || "en"}`)])).entries()].map(([name, t]) => ({
+        name,
+        status: t?.status ?? "NOT_SUBMITTED",
+        category: t?.category ?? null,
+        reason: t?.rejected_reason && t.rejected_reason !== "NONE" ? t.rejected_reason : null,
+      }));
+      return out({ ok: true, created, errors, statuses, phone, wa_ready: waReady(m) });
     }
 
     default:

@@ -11,8 +11,10 @@ import { INDIAN_STATES, STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/
 import { ORG, type Plan } from "@/lib/site";
 import { planFee } from "./JoinApp";
 import Qr from "./Qr";
+import { Alert, CodeForm, VerifyCard } from "./Verify";
 
-type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string };
+type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
+type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels };
 const sb = () => browserClient();
 const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
 const AUD: Record<string, string> = { student: "Student member", professional: "Professional member", institution: "Institution member", industry: "Industry member" };
@@ -75,6 +77,7 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
     const o = await portal("create_order", { coupon: quote?.coupon ?? "" });
     if (!o.ok) {
       setMsg(o.error ?? "Could not start the payment.");
+      if (o.need) document.getElementById("confirm-contact")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return setBusy(false);
     }
     if (o.free) return onChange("Your membership is active.");
@@ -424,17 +427,154 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
   );
 }
 
+function Verified({ on, label }: { on: boolean; label?: string }) {
+  return on ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-go-soft px-2.5 py-0.5 text-xs font-semibold text-go-deep">
+      <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden="true">
+        <path d="M2.5 7.5 5.8 10.5 11.5 3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {label ?? "Confirmed"}
+    </span>
+  ) : (
+    <span className="inline-flex rounded-full bg-[#fff4e5] px-2.5 py-0.5 text-xs font-semibold text-[#8a4b00]">Not confirmed</span>
+  );
+}
+
+/* Change the sign-in email: a code goes to the new address, and the old address gets a notice. */
+function ChangeEmail({ a, done }: { a: Account; done: (msg: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  if (!a.channels?.email) return <span className="text-sm font-normal text-ink2">You sign in with this email. To change it, write to us from the Help tab.</span>;
+  if (!open)
+    return (
+      <button type="button" className="link justify-self-start text-sm" onClick={() => setOpen(true)}>
+        Change email
+      </button>
+    );
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr("");
+    const r = await portal("send_code", { purpose: "change_email", email: email.trim() });
+    setBusy(false);
+    if (!r.ok && !r.wait) return setErr(r.error ?? "Could not send the code.");
+    setSent(true);
+  }
+  return (
+    <div className="mt-2 grid gap-3 rounded-2xl bg-mist p-4 font-normal">
+      {!sent ? (
+        <form onSubmit={send} className="grid gap-3" noValidate>
+          <label className={lbl}>
+            New email address
+            <input className="field" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={160} />
+          </label>
+          {err && <Alert tone="bad">{err}</Alert>}
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="btn btn-primary !min-h-10" disabled={busy}>
+              {busy ? "Sending…" : "Send code to new email"}
+            </button>
+            <button type="button" className="link text-sm" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p className="text-[0.95rem]">
+            We sent a code to <strong className="break-all">{email.trim().toLowerCase()}</strong>. Your email changes once you enter it.
+          </p>
+          <CodeForm
+            purpose="change_email"
+            extra={{ email: email.trim() }}
+            submitLabel="Change email"
+            onCancel={() => setOpen(false)}
+            onDone={async () => {
+              await sb().auth.refreshSession();
+              done("Your email is changed. Sign in with the new address from now on.");
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function Alerts({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
+  const p = a.profile;
+  const [news, setNews] = useState<boolean>(p.email_news !== false);
+  const [wa, setWa] = useState<boolean>(!!p.wa_updates);
+  const [msg, setMsg] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
+  const phoneOk = !!p.phone_verified_at;
+  async function save(next: { news?: boolean; wa?: boolean }) {
+    const n = next.news ?? news;
+    const w = next.wa ?? wa;
+    setNews(n);
+    setWa(w);
+    setMsg(null);
+    const { data } = await sb().rpc("member_set_alerts", { p_wa_updates: w, p_email_news: n });
+    if (data?.ok) {
+      setMsg({ tone: "good", text: "Saved." });
+      reload();
+    } else {
+      setMsg({ tone: "bad", text: data?.error ?? "Could not save." });
+      setNews(p.email_news !== false);
+      setWa(!!p.wa_updates);
+    }
+  }
+  const row = "flex items-start justify-between gap-4 border-t border-line py-4 first:border-t-0 first:pt-0";
+  return (
+    <div className="card grid content-start p-6 sm:p-8">
+      <h2 className="h-card !text-2xl">Messages from GRAAS</h2>
+      <div className="mt-4 grid">
+        <div className={row}>
+          <div>
+            <p className="font-semibold">Account and payment emails</p>
+            <p className="text-sm text-ink2">Codes, receipts, approvals and renewal reminders. Always on, because your membership depends on them.</p>
+          </div>
+          <span className="pt-1 text-sm font-semibold text-go-deep">On</span>
+        </div>
+        <label className={`${row} cursor-pointer`}>
+          <span>
+            <span className="block font-semibold">News and updates by email</span>
+            <span className="block text-sm text-ink2">Events, programmes and announcements for members.</span>
+          </span>
+          <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#067a2e]" checked={news} onChange={(e) => save({ news: e.target.checked })} />
+        </label>
+        <label className={`${row} ${phoneOk ? "cursor-pointer" : ""}`}>
+          <span>
+            <span className="block font-semibold">Account updates on WhatsApp</span>
+            <span className="block text-sm text-ink2">
+              {!a.channels?.whatsapp
+                ? "Coming soon. You will be able to switch this on once GRAAS WhatsApp is live."
+                : phoneOk
+                  ? `Approvals, receipts and reminders on +91 ${p.phone}.`
+                  : "Confirm your WhatsApp number first, on the Overview tab."}
+            </span>
+          </span>
+          <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-[#067a2e]" checked={wa && phoneOk} disabled={!phoneOk} onChange={(e) => save({ wa: e.target.checked })} />
+        </label>
+      </div>
+      {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+    </div>
+  );
+}
+
 function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
   const p = a.profile;
   const [msg, setMsg] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
   const [pw, setPw] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
+  const [pwBusy, setPwBusy] = useState(false);
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget).entries());
-    const { data } = await sb().rpc("member_update_profile", { p: { ...f, phone: String(f.phone).replace(/\D/g, "").slice(-10) } });
+    const phone = String(f.phone).replace(/\D/g, "").slice(-10);
+    const { data } = await sb().rpc("member_update_profile", { p: { ...f, phone } });
     if (data?.ok) {
-      setMsg({ tone: "good", text: "Saved." });
+      setMsg({ tone: "good", text: phone !== p.phone && p.phone_verified_at ? "Saved. Confirm your new number on WhatsApp from the Overview tab." : "Saved." });
       reload();
     } else setMsg({ tone: "bad", text: data?.error ?? "Could not save." });
   }
@@ -442,18 +582,23 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
-    const a1 = String(f.get("new_password")), a2 = String(f.get("new_password2"));
-    if (a1.length < 8) return setPw({ tone: "bad", text: "Use at least 8 characters." });
-    if (a1 !== a2) return setPw({ tone: "bad", text: "The two passwords do not match." });
-    const { error } = await sb().auth.updateUser({ password: a1 });
-    if (error) return setPw({ tone: "bad", text: "Could not change the password. Sign out, sign in again and retry." });
+    const cur = String(f.get("current_password")),
+      a1 = String(f.get("new_password")),
+      a2 = String(f.get("new_password2"));
+    if (!cur) return setPw({ tone: "bad", text: "Enter your current password." });
+    if (a1.length < 8) return setPw({ tone: "bad", text: "Use at least 8 characters for the new password." });
+    if (a1 !== a2) return setPw({ tone: "bad", text: "The two new passwords do not match." });
+    setPwBusy(true);
+    const r = await portal("change_password", { current: cur, password: a1 });
+    setPwBusy(false);
+    if (!r.ok) return setPw({ tone: "bad", text: r.error ?? "Could not change the password." });
     form.reset();
-    setPw({ tone: "good", text: "Password changed." });
+    setPw({ tone: "good", text: "Password changed. We have sent you a note about it." });
   }
   const org = p.kind === "student" ? "College or institute" : p.kind === "professional" ? "Company or organisation" : "Organisation";
   return (
     <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <form onSubmit={save} className="card grid gap-4 p-6 sm:p-8">
+      <form onSubmit={save} className="card grid content-start gap-4 p-6 sm:p-8">
         <h2 className="h-card !text-2xl">Your details</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={lbl}>
@@ -461,14 +606,19 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             <input name="full_name" className="field" defaultValue={p.full_name ?? ""} maxLength={80} required />
           </label>
           <label className={lbl}>
-            Mobile number
+            <span className="flex flex-wrap items-center gap-2">
+              Mobile number (WhatsApp) {a.channels?.whatsapp && <Verified on={!!p.phone_verified_at} />}
+            </span>
             <input name="phone" className="field" type="tel" inputMode="numeric" defaultValue={p.phone ?? ""} maxLength={14} required />
+            {p.phone_verified_at && <span className="text-sm font-normal text-ink2">If you change it, you confirm the new number again.</span>}
           </label>
-          <label className={lbl}>
-            Email
-            <input className="field bg-mist" value={p.email ?? ""} readOnly aria-describedby="email-note" />
-            <span id="email-note" className="text-sm font-normal text-ink2">You sign in with this email. To change it, write to us from the Help tab.</span>
-          </label>
+          <div className={`${lbl} sm:col-span-2`}>
+            <span className="flex flex-wrap items-center gap-2">
+              Email {a.channels?.email && <Verified on={!!p.email_verified_at} />}
+            </span>
+            <input className="field bg-mist" value={p.email ?? ""} readOnly aria-label="Email" />
+            <ChangeEmail a={a} done={(t) => reload(t)} />
+          </div>
           <label className={lbl}>
             City
             <input name="city" className="field" defaultValue={p.city ?? ""} maxLength={80} />
@@ -490,7 +640,7 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             {p.kind === "student" ? "Course and year" : "Designation"}
             <input name="designation" className="field" defaultValue={p.designation ?? ""} maxLength={120} />
           </label>
-          <label className={lbl}>
+          <label className={`${lbl} sm:col-span-2`}>
             <span>
               Website <span className="font-normal text-ink2">(optional)</span>
             </span>
@@ -502,19 +652,33 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         </div>
       </form>
-      <form onSubmit={changePassword} className="card grid content-start gap-4 p-6 sm:p-8">
-        <h2 className="h-card !text-2xl">Change password</h2>
-        <label className={lbl}>
-          New password
-          <input name="new_password" type="password" className="field" autoComplete="new-password" minLength={8} maxLength={72} required />
-        </label>
-        <label className={lbl}>
-          Type it again
-          <input name="new_password2" type="password" className="field" autoComplete="new-password" maxLength={72} required />
-        </label>
-        <button className="btn btn-ghost justify-self-start">Change password</button>
-        {pw && <Notice tone={pw.tone}>{pw.text}</Notice>}
-      </form>
+      <div className="grid content-start gap-5">
+        <Alerts a={a} reload={reload} />
+        <form onSubmit={changePassword} className="card grid content-start gap-4 p-6 sm:p-8">
+          <h2 className="h-card !text-2xl">Change password</h2>
+          <label className={lbl}>
+            Current password
+            <input name="current_password" type="password" className="field" autoComplete="current-password" maxLength={72} required />
+          </label>
+          <label className={lbl}>
+            New password
+            <input name="new_password" type="password" className="field" autoComplete="new-password" minLength={8} maxLength={72} required />
+          </label>
+          <label className={lbl}>
+            Type the new password again
+            <input name="new_password2" type="password" className="field" autoComplete="new-password" maxLength={72} required />
+          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <button className="btn btn-ghost" disabled={pwBusy}>
+              {pwBusy ? "Changing…" : "Change password"}
+            </button>
+            <Link href="/forgot" className="text-sm font-semibold underline decoration-go decoration-2 underline-offset-4">
+              Forgot it?
+            </Link>
+          </div>
+          {pw && <Notice tone={pw.tone}>{pw.text}</Notice>}
+        </form>
+      </div>
     </div>
   );
 }
@@ -630,6 +794,8 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
     if (msg) setFlash(msg);
     load();
   };
+  const needEmail = !!a.channels?.email && !a.profile.email_verified_at;
+  const needPhone = !!a.channels?.whatsapp && !!a.profile.phone && !a.profile.phone_verified_at;
   const tabs = [
     { id: "overview", label: "Overview", show: true },
     { id: "card", label: "Member ID", show: hasId },
@@ -671,6 +837,12 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
           </div>
         )}
         <div className="mt-6">
+          {tab === "overview" && (needEmail || needPhone) && (
+            <div id="confirm-contact" className="mb-5 grid gap-5 lg:grid-cols-2 print:hidden">
+              {needEmail && <VerifyCard kind="email" target={a.profile.email} required={a.channels?.email_required} onDone={() => reload("Your email is confirmed.")} />}
+              {needPhone && <VerifyCard kind="phone" target={`+91 ${a.profile.phone}`} required={a.channels?.phone_required} onDone={() => reload("Your WhatsApp number is confirmed. Account updates will come there too.")} />}
+            </div>
+          )}
           {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
           {tab === "card" && hasId && (
             <div className="card grid gap-6 p-6 sm:p-8">
