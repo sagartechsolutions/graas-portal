@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 import Footer from "@/components/site/Footer";
 import Header from "@/components/site/Header";
@@ -9,16 +10,16 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://graas.org.in"),
   title: { default: "GRAAS | Global Robotics And Automation Society", template: "%s | GRAAS" },
   description:
-    "GRAAS is the robotics and automation society for students, colleges and industry: live lectures, college chapters, competitions and real industry problems.",
+    "GRAAS membership connects students, professionals, colleges and industry in robotics and automation: live learning, campus chapters, competitions and real industrial problems.",
   openGraph: {
     type: "website",
     siteName: "GRAAS",
     title: "GRAAS | Global Robotics And Automation Society",
-    description: "Don't just study robots. Build them. Pre-register for membership.",
+    description: "Become part of the robotics generation. Reserve your place before membership opens.",
   },
 };
 
-export const viewport: Viewport = { themeColor: "#f4f6fb", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#ffffff", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

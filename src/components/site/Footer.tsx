@@ -1,46 +1,50 @@
 import Link from "next/link";
-import { NAV, ORG } from "@/lib/site";
-import { Logo } from "./Header";
+import { ORG, PROGRAMS } from "@/lib/site";
+import Logo from "./Logo";
+
+const cols = [
+  { title: "Membership", links: [{ href: "/membership", label: "Plans and benefits" }, { href: "/#join", label: "Become a member" }, { href: "/chapters", label: "Start a chapter" }] },
+  { title: "Programs", links: PROGRAMS.map((p) => ({ href: p.href, label: p.label })).concat([{ href: "/graascon", label: "GRAASCON" }]) },
+  { title: "Society", links: [{ href: "/about", label: "About GRAAS" }, { href: "/updates", label: "Updates" }, { href: "/gallery", label: "Gallery" }, { href: "/contact", label: "Contact" }] },
+];
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t-2 border-ink bg-surface">
-      <div className="hazard h-2.5" aria-hidden="true" />
-      <div className="mx-auto grid max-w-[1320px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.3fr_1fr_1fr]">
+    <footer className="mt-auto bg-ink text-white">
+      <div className="shell grid gap-12 py-16 lg:grid-cols-[1.4fr_2fr]">
         <div>
-          <Logo />
-          <p className="mt-4 max-w-sm text-ink2">
-            {ORG.name}. A society for people who learn, teach, build and hire in robotics and automation.
-          </p>
+          <Logo tone="light" full />
+          <p className="mt-6 max-w-sm text-white/70">A society for people who learn, teach, build and hire in robotics and automation.</p>
+          <Link href="/#join" className="btn btn-light mt-7">
+            Become a member
+          </Link>
         </div>
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-2 self-start font-semibold">
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="py-1 hover:text-cobalt">
-              {n.label}
-            </Link>
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          {cols.map((c) => (
+            <div key={c.title}>
+              <p className="text-sm font-semibold text-white/55">{c.title}</p>
+              <ul className="mt-4 grid gap-2.5">
+                {c.links.map((l) => (
+                  <li key={l.href + l.label}>
+                    <Link href={l.href} className="text-white/85 transition-colors hover:text-white">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-          <Link href="/about" className="py-1 hover:text-cobalt">
-            About
-          </Link>
-          <Link href="/contact" className="py-1 hover:text-cobalt">
-            Contact
-          </Link>
         </nav>
-        <div className="self-start">
-          <Link href="/#pre-register" className="btn btn-go">
-            Pre-register free
-          </Link>
-          <p className="mt-5 text-sm text-ink2">
-            <Link href="/privacy" className="underline underline-offset-4 hover:text-cobalt">
-              Privacy
-            </Link>
-          </p>
-        </div>
       </div>
-      <div className="border-t border-line">
-        <p className="mx-auto max-w-[1320px] px-5 py-5 text-sm text-ink2 sm:px-8">
-          © {2026} {ORG.name}
-        </p>
+      <div className="border-t border-white/10">
+        <div className="shell flex flex-wrap items-center justify-between gap-3 py-6 text-sm text-white/55">
+          <p>
+            © {2026} {ORG.name}
+          </p>
+          <Link href="/privacy" className="hover:text-white">
+            Privacy
+          </Link>
+        </div>
       </div>
     </footer>
   );

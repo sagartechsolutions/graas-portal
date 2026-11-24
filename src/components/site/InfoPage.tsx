@@ -1,9 +1,20 @@
 import type { ReactNode } from "react";
 import PreRegister from "@/components/home/PreRegister";
+import Photo from "@/components/ui/Photo";
+import { PHOTOS, type PhotoKey } from "@/lib/photos";
 
 export type Block = { heading: string; body?: string; points?: string[] };
 
-/** Shared layout for the inner pages: a large title, plain blocks of what the area offers, and a way to hear about it. */
+const BY_INTEREST: Record<string, PhotoKey> = {
+  lectures: "learn",
+  chapter: "chapters",
+  competitions: "rovers",
+  industry: "industry",
+  graascon: "assembly",
+  membership: "engineer",
+};
+
+/** Shared layout for the inner pages: title and photograph, what the area offers, and a way to reserve a place. */
 export default function InfoPage({
   title,
   intro,
@@ -12,6 +23,7 @@ export default function InfoPage({
   steps,
   stepsTitle,
   interest,
+  photo,
   cta,
   children,
 }: {
@@ -22,50 +34,70 @@ export default function InfoPage({
   steps?: string[];
   stepsTitle?: string;
   interest?: string;
+  photo?: PhotoKey;
   cta?: { title: string; intro: string };
   children?: ReactNode;
 }) {
+  const p = PHOTOS[photo ?? BY_INTEREST[interest ?? ""] ?? "bluearm"];
   return (
     <>
-      <section className="blueprint border-b-2 border-ink">
-        <div className="mx-auto max-w-[1320px] px-5 pb-14 pt-12 sm:px-8 lg:pb-20 lg:pt-20">
-          <h1 className="display max-w-5xl text-[clamp(3.4rem,11vw,7.5rem)]">{title}</h1>
-          <p className="lede mt-6 !max-w-2xl">{intro}</p>
-          {status && <p className="mt-6 inline-block rounded-md bg-hazard px-3 py-1.5 text-sm font-bold">{status}</p>}
+      <section className="shell grid items-center gap-10 pb-16 pt-8 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pb-24 lg:pt-14">
+        <div>
+          {status && (
+            <p className="chip">
+              <span className="dot" />
+              {status}
+            </p>
+          )}
+          <h1 className="h-display mt-5 !text-[clamp(2.4rem,1.5rem+3.6vw,4.1rem)]">{title}</h1>
+          <p className="lede mt-5">{intro}</p>
+          <p className="mt-8">
+            <a href="#join" className="btn btn-primary">
+              Become a member
+            </a>
+          </p>
+        </div>
+        <div className="aspect-[4/3] overflow-hidden rounded-[28px]">
+          <Photo src={p.src} alt={p.alt} eager sizes="(min-width: 1024px) 560px, 100vw" className="h-full w-full" />
         </div>
       </section>
-      <section className="mx-auto max-w-[1320px] px-5 py-16 sm:px-8 lg:py-20">
-        <div className="grid gap-x-12 gap-y-12 md:grid-cols-2">
-          {blocks.map((b) => (
-            <div key={b.heading} className="border-t-2 border-ink pt-5">
-              <h2 className="display text-4xl sm:text-5xl">{b.heading}</h2>
-              {b.body && <p className="mt-3 max-w-xl text-lg leading-relaxed text-ink2">{b.body}</p>}
-              {b.points && (
-                <ul className="mt-4 grid max-w-xl gap-2.5 text-lg">
-                  {b.points.map((p) => (
-                    <li key={p} className="flex items-start gap-3">
-                      <span aria-hidden="true" className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-signal ring-2 ring-ink" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-        {steps && (
-          <div className="mt-16">
-            <h2 className="display text-5xl sm:text-6xl">{stepsTitle}</h2>
-            <ol className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {steps.map((s, i) => (
-                <li key={s} className="plate-soft p-5">
-                  <span className="readout flex h-9 w-9 items-center justify-center rounded-full bg-ink font-bold text-white">{i + 1}</span>
-                  <p className="mt-3 text-lg font-semibold leading-snug">{s}</p>
-                </li>
-              ))}
-            </ol>
+
+      <section className="bg-mist">
+        <div className="shell section">
+          <div className="grid gap-5 md:grid-cols-2">
+            {blocks.map((b) => (
+              <div key={b.heading} className="card p-6 sm:p-8">
+                <h2 className="h-card !text-2xl">{b.heading}</h2>
+                {b.body && <p className="mt-3 text-ink2">{b.body}</p>}
+                {b.points && (
+                  <ul className="mt-4 grid gap-2.5">
+                    {b.points.map((pt) => (
+                      <li key={pt} className="flex items-start gap-3">
+                        <svg width="18" height="18" viewBox="0 0 18 18" className="mt-1 shrink-0" aria-hidden="true">
+                          <path d="M3.5 9.5 7.2 13 14.5 5" fill="none" stroke="#067a2e" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        {pt}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+          {steps && (
+            <div className="mt-20">
+              <h2 className="h-section">{stepsTitle}</h2>
+              <ol className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                {steps.map((s, i) => (
+                  <li key={s} className="card p-6">
+                    <span className="readout flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm text-white">{i + 1}</span>
+                    <p className="mt-4 text-lg font-semibold leading-snug">{s}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
       </section>
       {children}
       <PreRegister interest={interest} title={cta?.title} intro={cta?.intro} />

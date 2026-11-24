@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserClient } from "@/lib/browser";
 import { LEAD_KINDS } from "@/lib/site";
+import { Gallery, Updates } from "./Content";
 
 type PlanRow = {
   id: string;
@@ -61,7 +62,7 @@ function SignIn() {
   return (
     <section className="blueprint">
       <div className="mx-auto max-w-md px-5 py-20">
-        <h1 className="display text-7xl">Staff sign-in</h1>
+        <h1 className="h-section">Staff sign-in</h1>
         <form onSubmit={submit} className="plate mt-8 grid gap-4 p-6">
           <label className="grid gap-1.5 font-semibold">
             Email
@@ -254,7 +255,7 @@ function PlanCard({ plan, session, onSaved }: { plan: PlanRow; session: Session;
           {p.code} / {p.audience}
         </p>
         <label className="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" className="h-4 w-4 accent-[#1f3fff]" checked={p.is_published} onChange={(e) => setP({ ...p, is_published: e.target.checked })} />
+          <input type="checkbox" className="h-4 w-4 accent-[#067a2e]" checked={p.is_published} onChange={(e) => setP({ ...p, is_published: e.target.checked })} />
           Shown on website
         </label>
       </div>
@@ -286,7 +287,7 @@ function PlanCard({ plan, session, onSaved }: { plan: PlanRow; session: Session;
         <textarea className="field min-h-32" value={benefits} onChange={(e) => setBenefits(e.target.value)} />
       </label>
       <label className="flex items-center gap-2 text-sm font-semibold">
-        <input type="checkbox" className="h-4 w-4 accent-[#1f3fff]" checked={p.requires_approval} onChange={(e) => setP({ ...p, requires_approval: e.target.checked })} />
+        <input type="checkbox" className="h-4 w-4 accent-[#067a2e]" checked={p.requires_approval} onChange={(e) => setP({ ...p, requires_approval: e.target.checked })} />
         Application is verified before payment
       </label>
       <div className="flex items-center gap-4">
@@ -396,13 +397,13 @@ function Settings({ session }: { session: Session }) {
   return (
     <div className="grid max-w-3xl gap-8">
       <div className="plate grid gap-3 p-5">
-        <h3 className="text-xl font-bold">GRAAS contact details</h3>
+        <h3 className="text-xl font-semibold">GRAAS contact details</h3>
         <Field label="Official email" value={str(org, "email")} onChange={put(setOrg, "email")} />
         <Field label="Official phone" value={str(org, "phone")} onChange={put(setOrg, "phone")} />
         <Field label="Registered office address" value={str(org, "address")} onChange={put(setOrg, "address")} />
       </div>
       <div className="plate grid gap-3 p-5">
-        <h3 className="text-xl font-bold">GRAASCON</h3>
+        <h3 className="text-xl font-semibold">GRAASCON</h3>
         <Field label="Dates" hint="For example 14 to 16 May 2027" value={str(con, "dates")} onChange={put(setCon, "dates")} />
         <Field label="Venue" value={str(con, "venue")} onChange={put(setCon, "venue")} />
         <Field label="Paper submission link" value={str(con, "cfp_url")} onChange={put(setCon, "cfp_url")} />
@@ -423,7 +424,7 @@ function Settings({ session }: { session: Session }) {
 export default function AdminApp() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [role, setRole] = useState<string | null | undefined>(undefined);
-  const [tab, setTab] = useState<"leads" | "plans" | "settings">("leads");
+  const [tab, setTab] = useState<"leads" | "updates" | "gallery" | "plans" | "settings">("leads");
 
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => setSession(data.session));
@@ -446,7 +447,7 @@ export default function AdminApp() {
   if (role === null)
     return (
       <section className="mx-auto max-w-xl px-5 py-20">
-        <h1 className="display text-6xl">No staff access</h1>
+        <h1 className="h-section">No staff access</h1>
         <p className="lede mt-4">{session.user.email} is signed in but has not been given a staff role. Ask the GRAAS super admin to add you.</p>
         <button type="button" className="btn btn-quiet mt-6" onClick={() => sb().auth.signOut()}>
           Sign out
@@ -455,17 +456,20 @@ export default function AdminApp() {
     );
 
   const canPrice = role === "super_admin" || role === "finance";
+  const canPost = role === "super_admin" || role === "communications";
   const tabs = [
     { id: "leads", label: "Pre-registrations", show: true },
+    { id: "updates", label: "Updates", show: canPost },
+    { id: "gallery", label: "Gallery", show: canPost },
     { id: "plans", label: "Membership fees", show: canPrice },
     { id: "settings", label: "Settings", show: role === "super_admin" },
   ] as const;
 
   return (
-    <section className="mx-auto max-w-[1320px] px-5 py-10 sm:px-8">
+    <section className="shell py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="display text-6xl">GRAAS admin</h1>
+          <h1 className="h-section !text-4xl">GRAAS admin</h1>
           <p className="mt-1 text-sm text-ink2">
             {session.user.email} · {role.replace("_", " ")}
           </p>
@@ -474,7 +478,7 @@ export default function AdminApp() {
           Sign out
         </button>
       </div>
-      <div role="tablist" className="mt-7 flex flex-wrap gap-2 border-b-2 border-ink pb-3">
+      <div role="tablist" className="mt-7 flex flex-wrap gap-2 border-b border-line pb-4">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.id}
@@ -482,7 +486,7 @@ export default function AdminApp() {
             type="button"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`wide min-h-10 rounded-full border-[1.5px] border-ink px-4 py-1.5 ${tab === t.id ? "bg-ink text-white" : "bg-surface hover:bg-cobalt-soft"}`}
+            className={`min-h-10 rounded-full border px-4 py-1.5 font-semibold ${tab === t.id ? "border-ink bg-ink text-white" : "border-line bg-surface hover:border-ink"}`}
           >
             {t.label}
           </button>
@@ -490,6 +494,8 @@ export default function AdminApp() {
       </div>
       <div className="pt-7">
         {tab === "leads" && <Leads canEdit={["super_admin", "support", "communications", "membership_desk"].includes(role)} />}
+        {tab === "updates" && canPost && <Updates session={session} />}
+        {tab === "gallery" && canPost && <Gallery session={session} />}
         {tab === "plans" && canPrice && <Plans session={session} />}
         {tab === "settings" && role === "super_admin" && <Settings session={session} />}
       </div>

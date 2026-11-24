@@ -42,3 +42,69 @@ export async function getGraascon(): Promise<Graascon> {
     return fallback;
   }
 }
+
+export type Post = {
+  slug: string;
+  title: string;
+  summary: string | null;
+  body: string | null;
+  category: string;
+  cover_url: string | null;
+  published_at: string;
+};
+
+export async function getPosts(limit = 30): Promise<Post[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+  try {
+    const { data, error } = await publicClient()
+      .from("posts")
+      .select("slug,title,summary,body,category,cover_url,published_at")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as Post[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getPost(slug: string): Promise<Post | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("posts");
+  try {
+    const { data } = await publicClient()
+      .from("posts")
+      .select("slug,title,summary,body,category,cover_url,published_at")
+      .eq("is_published", true)
+      .eq("slug", slug)
+      .maybeSingle();
+    return (data as Post) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type GalleryItem = { id: string; image_url: string; caption: string | null; credit: string | null; width: number | null; height: number | null };
+
+export async function getGallery(limit = 60): Promise<GalleryItem[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("gallery");
+  try {
+    const { data, error } = await publicClient()
+      .from("gallery_items")
+      .select("id,image_url,caption,credit,width,height")
+      .eq("is_published", true)
+      .order("sort_order")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as GalleryItem[];
+  } catch {
+    return [];
+  }
+}

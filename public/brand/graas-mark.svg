@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 38 382 340" role="img" aria-label="GRAAS">
+  <path d="M114 364V279L139.5 246L165 279V364Z" fill="#b7babf"/>
+  <path d="M200 364V220L225 186L250 220V364Z" fill="#8e919a"/>
+  <path d="M284 364V167L309.5 132L335 167V364Z" fill="#5a616b"/>
+  <path d="M372 364V123L397.5 89L423 123V364Z" fill="#000e21"/>
+  <circle cx="397" cy="64" r="18.5" fill="#02ae3e"/>
+  <rect x="87" y="364" width="368" height="7" rx="3.5" fill="#010d21"/>
+</svg>

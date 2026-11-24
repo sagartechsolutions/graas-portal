@@ -16,18 +16,18 @@ const items = [
 export default function Page() {
   return (
     <section className="mx-auto max-w-3xl px-5 py-14 sm:px-8 lg:py-20">
-      <h1 className="display text-[clamp(3.4rem,10vw,6rem)]">How we use your details</h1>
+      <h1 className="h-section">How we use your details</h1>
       <p className="lede mt-5 !max-w-none">This notice covers pre-registration and messages sent through this website to the {ORG.name}.</p>
       <div className="mt-10 grid gap-8">
         {items.map((i) => (
-          <div key={i.h} className="border-t-2 border-ink pt-4">
-            <h2 className="text-2xl font-bold">{i.h}</h2>
-            <p className="mt-2 text-lg leading-relaxed text-ink2">{i.p}</p>
+          <div key={i.h} className="border-t border-line pt-6">
+            <h2 className="h-card">{i.h}</h2>
+            <p className="mt-2 text-ink2">{i.p}</p>
           </div>
         ))}
       </div>
       <p className="mt-10">
-        <Link href="/contact" className="btn btn-quiet">
+        <Link href="/contact" className="btn btn-ghost">
           Go to the contact page
         </Link>
       </p>

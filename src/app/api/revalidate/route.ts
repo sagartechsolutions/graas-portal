@@ -16,5 +16,7 @@ export async function POST(req: Request) {
   if (!staff?.is_active) return NextResponse.json({ ok: false }, { status: 403 });
   revalidateTag("plans", { expire: 0 });
   revalidateTag("settings", { expire: 0 });
+  revalidateTag("posts", { expire: 0 });
+  revalidateTag("gallery", { expire: 0 });
   return NextResponse.json({ ok: true });
 }

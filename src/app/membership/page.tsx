@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import InfoPage from "@/components/site/InfoPage";
-import { Plans } from "@/components/home/Sections";
+import Plans from "@/components/home/Plans";
 
 export const metadata: Metadata = { title: "Membership", description: "GRAAS membership for students, professionals, institutions and industry." };
 

@@ -3,13 +3,18 @@ export const ORG = {
   short: "GRAAS",
 };
 
+export const PROGRAMS = [
+  { href: "/learn", label: "Learn", note: "Live lectures and courses" },
+  { href: "/chapters", label: "Chapters", note: "A GRAAS team on your campus" },
+  { href: "/events", label: "Events", note: "Workshops and competitions" },
+  { href: "/industry", label: "Industry", note: "Jobs and real problems" },
+];
+
 export const NAV = [
-  { href: "/learn", label: "Learn" },
-  { href: "/chapters", label: "Chapters" },
-  { href: "/events", label: "Events" },
-  { href: "/industry", label: "Industry" },
-  { href: "/graascon", label: "GRAASCON" },
   { href: "/membership", label: "Membership" },
+  { href: "/updates", label: "Updates" },
+  { href: "/gallery", label: "Gallery" },
+  { href: "/about", label: "About" },
 ];
 
 export const TRACKS = [

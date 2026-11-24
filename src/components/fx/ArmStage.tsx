@@ -2,12 +2,17 @@
 
 import { useEffect, useRef } from "react";
 
-const INK = "#0c1330";
-const COBALT = "#1f3fff";
-const SIGNAL = "#ff5b1a";
-const HAZARD = "#ffc400";
-const LINE = "#d5dbe8";
+// Colours come from the GRAAS logo: navy, its three greys, and the green dot.
+const INK = "#000e21";
+const SLATE7 = "#5a616b";
+const SLATE5 = "#8e919a";
+const SLATE3 = "#b7babf";
+const GO = "#02ae3e";
+const LINE = "#e2e4e9";
+const MIST = "#f5f6f8";
 const WHITE = "#ffffff";
+// One tone per block, in the order of the logo bars.
+const TONES = [SLATE3, SLATE5, SLATE7, INK];
 
 type Pt = { x: number; y: number };
 type Block = { idx: number; x: number; y: number; alpha: number };
@@ -33,7 +38,9 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
   const jRef = useRef<HTMLSpanElement>(null);
   const tcpRef = useRef<HTMLSpanElement>(null);
   const placeRef = useRef(onPlace);
-  placeRef.current = onPlace;
+  useEffect(() => {
+    placeRef.current = onPlace;
+  }, [onPlace]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -211,12 +218,16 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x));
       ctx.beginPath();
       ctx.roundRect(-w / 2, -w / 2, len + w, w, w / 2);
+      ctx.shadowColor = "rgba(0,14,33,0.16)";
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 5;
       ctx.fillStyle = fill;
       ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = INK;
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = 1.25;
+      ctx.strokeStyle = fill === WHITE ? SLATE3 : INK;
       ctx.stroke();
-      if (len > w * 1.6) {
+      if (len > w * 1.6 && fill === WHITE) {
         ctx.beginPath();
         ctx.moveTo(w * 0.7, 0);
         ctx.lineTo(len - w * 0.7, 0);
@@ -230,14 +241,11 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
     function joint(p: Pt, r: number) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = SIGNAL;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r * 0.32, 0, Math.PI * 2);
       ctx.fillStyle = INK;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 0.34, 0, Math.PI * 2);
+      ctx.fillStyle = GO;
       ctx.fill();
     }
 
@@ -245,17 +253,14 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       ctx.save();
       ctx.globalAlpha = b.alpha;
       ctx.beginPath();
-      ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 6);
-      ctx.fillStyle = SIGNAL;
+      ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 9);
+      ctx.fillStyle = TONES[b.idx % TONES.length];
       ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
-      ctx.fillStyle = INK;
-      ctx.font = `800 ${bw < 90 ? 12 : 14}px "Archivo Variable", system-ui, sans-serif`;
+      ctx.fillStyle = b.idx % TONES.length === 0 ? INK : WHITE;
+      ctx.font = `600 ${bw < 90 ? 13 : 15}px "IBM Plex Sans Variable", system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(words[b.idx].toUpperCase(), cx, cy + 1);
+      ctx.fillText(words[b.idx], cx, cy + 1);
       ctx.restore();
     }
 
@@ -266,31 +271,16 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       // reach envelope
       ctx.save();
       ctx.setLineDash([5, 7]);
-      ctx.strokeStyle = "rgba(31,63,255,0.35)";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(0,14,33,0.2)";
+      ctx.lineWidth = 1.25;
       ctx.beginPath();
       ctx.arc(B.x, B.y, L1 + L2, Math.PI * 0.98, Math.PI * 1.62);
       ctx.stroke();
       ctx.restore();
 
-      // floor and cell marking
-      ctx.fillStyle = HAZARD;
-      ctx.fillRect(B.x - 74, floorY, 148, 9);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(B.x - 74, floorY, 148, 9);
-      ctx.clip();
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 6;
-      for (let x = B.x - 90; x < B.x + 90; x += 18) {
-        ctx.beginPath();
-        ctx.moveTo(x, floorY + 12);
-        ctx.lineTo(x + 12, floorY - 3);
-        ctx.stroke();
-      }
-      ctx.restore();
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 2;
+      // floor
+      ctx.strokeStyle = SLATE3;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(0, floorY);
       ctx.lineTo(W, floorY);
@@ -298,22 +288,29 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
 
       // outfeed belt
       ctx.fillStyle = WHITE;
+      ctx.strokeStyle = SLATE3;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.roundRect(-12, beltY, beltEnd + 12, 14, 7);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = INK;
+      ctx.fillStyle = SLATE5;
       for (let x = beltEnd - 9 - beltPhase; x > -6; x -= 22) {
         ctx.beginPath();
-        ctx.arc(x, beltY + 7, 3, 0, Math.PI * 2);
+        ctx.arc(x, beltY + 7, 2.5, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillRect(beltEnd - 30, beltY + 14, 4, floorY - beltY - 14);
-      ctx.fillRect(beltEnd * 0.35, beltY + 14, 4, floorY - beltY - 14);
+      ctx.fillStyle = SLATE3;
+      ctx.fillRect(beltEnd - 30, beltY + 14, 3, floorY - beltY - 14);
+      ctx.fillRect(beltEnd * 0.35, beltY + 14, 3, floorY - beltY - 14);
 
       // feeder pallet
-      ctx.fillStyle = INK;
-      ctx.fillRect(feeder.x - bw / 2 - 5, floorY - 7, bw + 10, 7);
+      ctx.fillStyle = MIST;
+      ctx.strokeStyle = SLATE3;
+      ctx.beginPath();
+      ctx.roundRect(feeder.x - bw / 2 - 6, floorY - 7, bw + 12, 7, 2);
+      ctx.fill();
+      ctx.stroke();
 
       for (const b of belt) drawBlock(b, b.x, b.y);
       if (feederBlock) drawBlock(feederBlock, feederBlock.x, feederBlock.y);
@@ -332,7 +329,7 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       capsule(B, E, Math.max(18, L1 * 0.13), WHITE);
       capsule(E, Wr, Math.max(14, L1 * 0.1), WHITE);
       const tip = { x: cur.x, y: cur.y - 8 };
-      capsule(Wr, tip, 10, COBALT);
+      capsule(Wr, tip, 10, INK);
       // gripper
       const open = 7 + (1 - grip) * 11;
       ctx.fillStyle = INK;
@@ -348,8 +345,8 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       // pointer crosshair in manual mode
       if (manual && pointer) {
         const p = clampTarget(pointer);
-        ctx.strokeStyle = COBALT;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = GO;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(p.x - 12, p.y);
         ctx.lineTo(p.x + 12, p.y);
@@ -463,7 +460,7 @@ export default function ArmStage({ words, onPlace }: { words: string[]; onPlace:
       />
       <div
         aria-hidden="true"
-        className="readout pointer-events-none absolute left-3 top-3 rounded-md border border-line bg-surface/85 px-3 py-2 text-[11px] leading-[1.55] text-ink2 backdrop-blur-sm sm:text-xs"
+        className="readout pointer-events-none absolute left-3 top-3 rounded-xl border border-line bg-white/85 px-3 py-2 text-[11px] leading-[1.6] text-ink2 backdrop-blur-sm sm:left-4 sm:top-4 sm:text-xs"
       >
         <div>
           <span className="text-ink">Mode</span> <span ref={modeRef}>Auto</span>
