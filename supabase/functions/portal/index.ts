@@ -55,7 +55,12 @@ async function rzp(g: any, method: string, path: string, body?: unknown) {
     return { ok: false, status: 0, j: {} as any };
   }
 }
-const rzpError = (r: { status: number; j: any }) => r.j?.error?.description ?? (r.status ? `Razorpay answered with error ${r.status}.` : "Razorpay could not be reached.");
+const rzpError = (r: { status: number; j: any }) => {
+  const e = r.j?.error;
+  if (!e) return r.status ? `Razorpay answered with error ${r.status}.` : "Razorpay could not be reached.";
+  const extra = [e.reason && e.reason !== "NA" ? e.reason : null, e.field ? `field ${e.field}` : null, e.step && e.step !== "NA" ? `step ${e.step}` : null].filter(Boolean).join(", ");
+  return `${e.description ?? "Razorpay refused the request."}${extra ? ` (${extra})` : ""}`;
+};
 const gateway = async () => ((await admin.rpc("svc_gateway")).data ?? {}) as any;
 const ready = (g: any) => !!(g.enabled && g.key_id && g.key_secret);
 
@@ -263,8 +268,9 @@ Deno.serve(async (req) => {
       if (!ctx || ctx.status !== "requested") return fail("This refund is not waiting.");
       const g = await gateway();
       if (!g.key_id || !g.key_secret) return fail("Enter the Razorpay keys first.");
-      const r = await rzp(g, "POST", `/payments/${ctx.rzp_payment_id}/refund`, { amount: ctx.amount_paise, notes: { reason: ctx.reason } });
+      const r = await rzp(g, "POST", `/payments/${ctx.rzp_payment_id}/refund`, { amount: Number(ctx.amount_paise), speed: "normal", notes: { reason: String(ctx.reason ?? "").slice(0, 250) } });
       await admin.rpc("svc_refund_done", { p_refund: refundId, p_actor: user.id, p_rzp_refund: r.ok ? r.j.id : null, p_error: r.ok ? null : rzpError(r) });
+      if (!r.ok) await audit("refund_failed", "refunds", String(refundId), { status: r.status, error: r.j?.error ?? null, mode: g.mode });
       return r.ok ? out({ ok: true }) : fail("Razorpay did not accept the refund. " + rzpError(r));
     }
 
