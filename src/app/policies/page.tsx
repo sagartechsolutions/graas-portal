@@ -10,10 +10,10 @@ export default async function Page() {
   const policies = await getPolicies();
   return (
     <>
-      <section className="shell pb-20 pt-10 lg:pb-28 lg:pt-16">
+      <section className="shell pb-12 pt-7 lg:pb-16 lg:pt-10">
         <h1 className="h-display !text-[clamp(2.4rem,1.5rem+3.6vw,4.1rem)]">Rules and policies</h1>
         <p className="lede mt-4">The rules every member agrees to, and how GRAAS handles fees, refunds and personal details.</p>
-        <ul className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {policies.map((p) => (
             <li key={p.slug}>
               <Link href={`/policies/${p.slug}`} className="card card-lift flex h-full flex-col p-6 sm:p-8">

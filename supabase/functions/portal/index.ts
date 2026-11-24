@@ -161,6 +161,13 @@ Deno.serve(async (req) => {
         designation: text(b.designation, 120),
         website: text(b.website, 160),
         ref: text(b.ref, 12),
+        gender: text(b.gender, 40),
+        course: text(b.course, 80),
+        branch: text(b.branch, 80),
+        study_year: text(b.study_year, 40),
+        guardian_name: text(b.guardian_name, 80),
+        guardian_phone: String(b.guardian_phone ?? "").replace(/\D/g, "").slice(-10),
+        guardian_agree: b.guardian_agree === true,
         accept: b.accept === true,
       };
       const password = String(b.password ?? "");
@@ -208,9 +215,15 @@ Deno.serve(async (req) => {
         }
       }
       const g = await gateway();
-      const years = Number(b.years ?? 1);
-      if (!Number.isInteger(years) || years < 1 || years > 10) return fail("Choose a membership length.");
-      const o = await admin.rpc("svc_new_order", { p_user: user.id, p_coupon: b.coupon ? text(b.coupon, 20) : null, p_can_charge: ready(g), p_years: years });
+      let o: any;
+      if (b.purpose === "change") {
+        // Fee difference for a membership type change that staff have approved.
+        o = await admin.rpc("svc_new_change_order", { p_user: user.id, p_can_charge: ready(g) });
+      } else {
+        const years = Number(b.years ?? 1);
+        if (!Number.isInteger(years) || years < 1 || years > 10) return fail("Choose a membership length.");
+        o = await admin.rpc("svc_new_order", { p_user: user.id, p_coupon: b.coupon ? text(b.coupon, 20) : null, p_can_charge: ready(g), p_years: years });
+      }
       if (o.error) return fail("Could not start the payment. Please try again.");
       if (!o.data?.ok || o.data.free) return out(o.data);
       const r = await rzp(g, "POST", "/orders", { amount: o.data.total_paise, currency: "INR", receipt: o.data.order_id, notes: { purpose: "GRAAS membership", plan: o.data.plan_name } });

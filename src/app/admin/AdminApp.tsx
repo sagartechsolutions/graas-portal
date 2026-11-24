@@ -6,7 +6,9 @@ import { browserClient } from "@/lib/browser";
 import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
 import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
+import { Changes } from "./Changes";
 import { Members } from "./Members";
+import { ProfileOptionsEditor } from "./Options";
 import { Broadcast, Messages } from "./Messages";
 import { Coupons, Gateway, Payments } from "./Money";
 
@@ -526,6 +528,7 @@ function Settings({ session }: { session: Session }) {
         </label>
         <p className="text-xs text-ink2">Untick to pause new sign-ups. Existing members can still sign in, pay and renew.</p>
       </div>
+      <ProfileOptionsEditor session={session} onSaved={() => refreshSite(session)} />
       <div className="plate grid gap-3 p-5">
         <h3 className="text-xl font-semibold">GRAASCON</h3>
         <Field label="Dates" hint="For example 14 to 16 May 2027" value={str(con, "dates")} onChange={put(setCon, "dates")} />
@@ -547,7 +550,7 @@ function Settings({ session }: { session: Session }) {
 
 const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Overview", items: [["dashboard", "Dashboard"]] },
-  { title: "Membership", items: [["members", "Members"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
+  { title: "Membership", items: [["members", "Members"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
   { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
   { title: "Messages", items: [["messages", "Email and WhatsApp"], ["broadcast", "Send an update"]] },
@@ -598,6 +601,7 @@ export default function AdminApp() {
   const allowed: Record<string, boolean> = {
     dashboard: true,
     members: true,
+    changes: is("membership_desk", "finance"),
     payments: is("finance", "membership_desk", "support"),
     plans: is("finance"),
     coupons: true,
@@ -671,6 +675,7 @@ export default function AdminApp() {
         <div className="min-w-0">
           {current === "dashboard" && <Dashboard go={setTab} />}
           {current === "members" && <Members role={role} />}
+          {current === "changes" && <Changes role={role} />}
           {current === "payments" && <Payments role={role} />}
           {current === "plans" && <Plans session={session} />}
           {current === "coupons" && <Coupons role={role} session={session} />}

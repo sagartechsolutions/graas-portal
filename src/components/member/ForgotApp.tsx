@@ -81,7 +81,7 @@ export default function ForgotApp() {
 
   return (
     <section className="bg-mist">
-      <div className="mx-auto w-full max-w-md px-5 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-md px-5 py-10 sm:py-16">
         <h1 className="h-section">{step === "done" ? "Password changed" : "Reset your password"}</h1>
 
         {step === "done" ? (

@@ -35,7 +35,7 @@ export default function VerifyApp() {
   const t = res?.found ? TONE[res.state ?? "inactive"] : null;
   return (
     <section className="bg-mist">
-      <div className="mx-auto w-full max-w-xl px-5 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-16">
         <h1 className="h-section">Verify a member</h1>
         <p className="mt-3 text-ink2">Scan the QR code on a GRAAS member ID, or type the member number printed on it.</p>
         <form

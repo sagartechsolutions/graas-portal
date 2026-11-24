@@ -59,14 +59,14 @@
 @layer components {
   /* Type */
   .h-display {
-    font-size: clamp(2.6rem, 1.2rem + 4.2vw, 6.4rem);
+    font-size: clamp(2.5rem, 1.2rem + 3.8vw, 5.6rem);
     font-weight: 600;
     line-height: 1.02;
     letter-spacing: -0.038em;
     text-wrap: balance;
   }
   .h-section {
-    font-size: clamp(2rem, 1.3rem + 2.3vw, 4rem);
+    font-size: clamp(1.9rem, 1.3rem + 2vw, 3.4rem);
     font-weight: 600;
     line-height: 1.07;
     letter-spacing: -0.032em;
@@ -112,7 +112,7 @@
     padding-inline: clamp(1.25rem, 4vw, 5rem);
   }
   .section {
-    padding-block: clamp(4rem, 2.75rem + 5vw, 6.75rem);
+    padding-block: clamp(2.75rem, 1.9rem + 3.2vw, 4.75rem);
   }
 
   /* Surfaces */
@@ -402,12 +402,14 @@ input[type="range"].jog::-moz-range-thumb {
   .rover { left: 6% !important; }
 }
 
-/* Printing an ID, certificate or receipt: only that block goes to paper. */
+/* Printing an ID, certificate or receipt: only that block goes to paper, on a single sheet.
+   The rest of the page is collapsed so no blank pages follow. */
 @media print {
   body * { visibility: hidden !important; }
+  body > * { height: 0 !important; min-height: 0 !important; overflow: hidden !important; }
   .print-area, .print-area * { visibility: visible !important; }
   .print-area {
-    position: absolute !important;
+    position: fixed !important;
     left: 0;
     top: 0;
     margin: 0 !important;
@@ -416,4 +418,12 @@ input[type="range"].jog::-moz-range-thumb {
     print-color-adjust: exact;
   }
   @page { margin: 12mm; }
+  /* Member ID: both sides at bank-card size (85.6 x 54 mm), with a thin cutting edge. */
+  .print-id { display: flex !important; flex-wrap: wrap; gap: 8mm; width: 186mm; }
+  .print-id .id-side { width: 85.6mm !important; }
+  .print-id .id-side > div { box-shadow: none !important; outline: 0.2mm dashed #8e919a; outline-offset: 0.6mm; }
+  .print-id figure { margin: 0; }
+  /* Certificate: a full A4 landscape sheet (the page size is set by the certificate itself). */
+  .print-cert { min-width: 0 !important; width: 297mm !important; }
+  .print-cert .cert-sheet { width: 297mm !important; height: 210mm !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; }
 }

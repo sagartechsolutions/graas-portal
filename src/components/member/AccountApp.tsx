@@ -5,19 +5,19 @@ import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import Logo, { LogoMark } from "@/components/site/Logo";
+import Logo from "@/components/site/Logo";
 import { browserClient, portal } from "@/lib/browser";
 import { INDIAN_STATES, STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
-import { ORG, type Plan } from "@/lib/site";
+import type { Plan } from "@/lib/site";
+import { EMPTY_OPTIONS, GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, initials, isIndividual, isMinor, removePhoto, uploadPhoto, usePhoto, type ProfileOptions } from "./Details";
 import { planFee } from "./JoinApp";
-import Qr from "./Qr";
+import { Certificate, IdCards } from "./MemberDocs";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
-type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels };
+type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels; options?: ProfileOptions };
 const sb = () => browserClient();
 const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
-const AUD: Record<string, string> = { student: "Student member", professional: "Professional member", institution: "Institution member", industry: "Industry member" };
 
 function loadRazorpay(): Promise<boolean> {
   return new Promise((res) => {
@@ -59,6 +59,33 @@ function Steps({ m, state }: { m: any; state: string }) {
   );
 }
 
+/** Opens Razorpay for an order the portal created, then confirms the payment. */
+async function openCheckout(o: any, done: (msg?: string) => void, setBusy: (b: boolean) => void, setMsg: (m: string) => void) {
+  if (!(await loadRazorpay())) {
+    setMsg("The payment window could not load. Check your internet and try again.");
+    return setBusy(false);
+  }
+  const rz = new (window as any).Razorpay({
+    key: o.key_id,
+    order_id: o.rzp_order_id,
+    amount: o.amount,
+    currency: "INR",
+    name: "GRAAS",
+    description: String(o.description ?? "GRAAS membership"),
+    prefill: o.prefill,
+    theme: { color: "#000e21" },
+    modal: { ondismiss: () => setBusy(false) },
+    handler: async (r: any) => {
+      setMsg("Confirming your payment…");
+      const v = await portal("verify_payment", { rzp_order_id: r.razorpay_order_id, rzp_payment_id: r.razorpay_payment_id, signature: r.razorpay_signature });
+      setBusy(false);
+      done(v.ok ? "Payment received. Thank you." : v.error);
+    },
+  });
+  rz.on("payment.failed", () => setMsg("The payment did not go through. Nothing was charged, or it will be reversed by your bank. You can try again."));
+  rz.open();
+}
+
 /* Fee, coupon and the Razorpay checkout. Used for a first payment and for renewal. */
 function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onChange: (msg?: string) => void }) {
   const m = a.membership;
@@ -94,29 +121,7 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
       return setBusy(false);
     }
     if (o.free) return onChange("Your membership is active.");
-    if (!(await loadRazorpay())) {
-      setMsg("The payment window could not load. Check your internet and try again.");
-      return setBusy(false);
-    }
-    const rz = new (window as any).Razorpay({
-      key: o.key_id,
-      order_id: o.rzp_order_id,
-      amount: o.amount,
-      currency: "INR",
-      name: "GRAAS",
-      description: String(o.description ?? "GRAAS membership"),
-      prefill: o.prefill,
-      theme: { color: "#000e21" },
-      modal: { ondismiss: () => setBusy(false) },
-      handler: async (r: any) => {
-        setMsg("Confirming your payment…");
-        const v = await portal("verify_payment", { rzp_order_id: r.razorpay_order_id, rzp_payment_id: r.razorpay_payment_id, signature: r.razorpay_signature });
-        setBusy(false);
-        onChange(v.ok ? "Payment received. Your membership is active." : v.error);
-      },
-    });
-    rz.on("payment.failed", () => setMsg("The payment did not go through. Nothing was charged, or it will be reversed by your bank. You can try again."));
-    rz.open();
+    await openCheckout(o, (t) => onChange(t === "Payment received. Thank you." ? "Payment received. Your membership is active." : t), setBusy, setMsg);
   }
 
   if (quote?.fee_pending) return <Notice tone="warn">The fee for this membership has not been announced yet. Your application is saved; we will message you when payment opens, and you can pay here.</Notice>;
@@ -213,78 +218,6 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
   );
 }
 
-function IdCard({ a }: { a: Account }) {
-  const m = a.membership, p = a.profile;
-  const url = `${window.location.origin}/verify?id=${m.member_no}`;
-  return (
-    <div className="print-area @container relative aspect-[1.586] w-full max-w-[460px] overflow-hidden rounded-[22px] bg-ink text-white shadow-[var(--shadow-lift)]">
-      <div aria-hidden="true" className="absolute inset-0" style={{ background: "radial-gradient(420px circle at 80% 0%, rgba(255,255,255,0.16), transparent 60%)" }} />
-      <LogoMark size={250} tone="light" className="absolute -bottom-10 -right-8 opacity-[0.06]" />
-      <div className="relative flex h-full flex-col justify-between p-[6.5%]">
-        <div className="flex items-start justify-between gap-2">
-          <span className="origin-top-left @max-sm:scale-[0.72]">
-            <Logo tone="light" />
-          </span>
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium @max-sm:px-2 @max-sm:text-[0.62rem]">
-            <span className="dot" /> {AUD[m.plan.audience]}
-          </span>
-        </div>
-        <div className="flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-xl font-semibold leading-tight tracking-tight @max-sm:text-base sm:text-2xl">{p.full_name}</p>
-            <p className="truncate text-sm text-white/65 @max-sm:text-xs">{m.organisation ?? p.organisation}</p>
-            <p className="readout mt-3 text-[0.7rem] text-white/50 @max-sm:hidden">Member number</p>
-            <p className="readout whitespace-nowrap text-base @max-sm:mt-1.5 @max-sm:text-[0.8rem]">{m.member_no}</p>
-            <p className="mt-1 text-xs text-white/60 @max-sm:text-[0.65rem]">{m.ends_on ? `Valid until ${shortDate(m.ends_on)}` : "No end date"}</p>
-          </div>
-          <div className="shrink-0 rounded-xl bg-white p-1.5 @max-sm:rounded-lg @max-sm:p-1">
-            <Qr value={url} size={84} className="@max-sm:h-[58px] @max-sm:w-[58px]" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Certificate({ a }: { a: Account }) {
-  const m = a.membership, p = a.profile;
-  const url = `${window.location.origin}/verify?id=${m.member_no}`;
-  const org = m.plan.audience === "institution" || m.plan.audience === "industry";
-  return (
-    <div className="print-area mx-auto w-full max-w-4xl rounded-[18px] border border-line bg-white p-3 shadow-[var(--shadow-card)]">
-      <div className="relative overflow-hidden rounded-[12px] border-2 border-ink px-6 py-10 text-center sm:px-14 sm:py-14">
-        <LogoMark size={420} className="pointer-events-none absolute -bottom-10 -right-16 opacity-[0.05]" />
-        <div className="relative">
-          <div className="flex justify-center">
-            <LogoMark size={74} />
-          </div>
-          <p className="mt-4 text-sm font-semibold tracking-wide text-ink2">{ORG.name}</p>
-          <h2 className="mt-6 text-3xl font-semibold tracking-tight sm:text-5xl">Certificate of membership</h2>
-          <p className="mt-8 text-ink2">This is to certify that</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight sm:text-4xl">{org ? (m.organisation ?? p.organisation) : p.full_name}</p>
-          {org && <p className="mt-1 text-ink2">represented by {p.full_name}</p>}
-          <p className="mx-auto mt-5 max-w-xl text-ink2">
-            is a <strong className="font-semibold text-ink">{m.plan.name} member</strong> of the {ORG.name}
-            {m.ends_on ? `, for the period ${shortDate(m.starts_on)} to ${shortDate(m.ends_on)}.` : `, from ${shortDate(m.starts_on)}.`}
-          </p>
-          <div className="mt-10 flex flex-wrap items-end justify-between gap-6 text-left">
-            <div>
-              <p className="text-sm text-ink2">Member number</p>
-              <p className="readout text-lg font-medium">{m.member_no}</p>
-              <p className="mt-3 text-sm text-ink2">Issued on</p>
-              <p className="font-medium">{shortDate(m.activated_at)}</p>
-            </div>
-            <div className="flex items-end gap-3">
-              <p className="max-w-[11rem] text-right text-xs text-ink2">Issued digitally. Scan to check that this membership is current.</p>
-              <Qr value={url} size={92} className="rounded-md border border-line" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Receipt({ o, org }: { o: any; org: any }) {
   const row = "flex justify-between gap-6 py-1.5";
   return (
@@ -310,7 +243,7 @@ function Receipt({ o, org }: { o: any; org: any }) {
       <dl className="py-5 text-[0.95rem]">
         <div className={row}>
           <dt>
-            {o.plan_name} membership, {o.term_label ?? "1 year"} ({o.kind === "renewal" ? "renewal" : "new"})
+            {o.kind === "change" ? `Change of membership type to ${o.plan_name}, ${o.term_label ?? ""}` : `${o.plan_name} membership, ${o.term_label ?? "1 year"} (${o.kind === "renewal" ? "renewal" : "new"})`}
           </dt>
           <dd className="readout">{inr(o.base_paise)}</dd>
         </div>
@@ -355,6 +288,252 @@ function PrintButton({ label }: { label: string }) {
     <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
       {label}
     </button>
+  );
+}
+
+/** The fields a member type needs: organisation, role (not for students), gender and student details. */
+function TypeFields({ audience, a }: { audience: string; a: Account }) {
+  // Details carry over only within the same kind of member; a student moving to a job starts with a blank company.
+  const same = audience === (a.membership?.plan?.audience ?? a.profile.kind);
+  const p = same ? a.profile : { gender: a.profile.gender };
+  const options = a.options ?? EMPTY_OPTIONS;
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className={lbl}>
+        {ORG_LABEL[audience] ?? "Organisation"}
+        <input name="organisation" className="field" defaultValue={p.organisation ?? ""} maxLength={120} required />
+      </label>
+      {ROLE_LABEL[audience] && (
+        <label className={lbl}>
+          {ROLE_LABEL[audience]}
+          <input name="designation" className="field" defaultValue={p.designation ?? ""} maxLength={120} placeholder={ROLE_HINT[audience]} />
+        </label>
+      )}
+      <PersonFields key={audience} audience={audience} options={options} initial={p} lbl={lbl} />
+    </div>
+  );
+}
+
+const formDetails = (form: HTMLFormElement) => {
+  const f = new FormData(form);
+  const v = (k: string) => String(f.get(k) ?? "").trim();
+  return { organisation: v("organisation"), designation: v("designation"), gender: v("gender"), course: v("course"), branch: v("branch"), study_year: v("study_year") };
+};
+
+/** Before payment: the member changes type at once, giving the details the new type needs. */
+function SwitchType({ a, plans, reload }: { a: Account; plans: Plan[]; reload: (msg?: string) => void }) {
+  const m = a.membership;
+  const [to, setTo] = useState<string>(m.plan.code);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const target = plans.find((p) => p.code === to);
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!target) return;
+    setBusy(true);
+    setErr("");
+    const { data } = await sb().rpc("member_switch_plan", { p_plan_code: to, p_details: formDetails(e.currentTarget) });
+    setBusy(false);
+    if (!data?.ok) return setErr(data?.error ?? "That did not work. Please try again.");
+    reload(`Your membership is now ${target.name}. Your member ID will show these details.`);
+  }
+  return (
+    <div className="grid gap-4">
+      <label className={`${lbl} max-w-xs`}>
+        Change membership type
+        <select className="field" value={to} onChange={(e) => setTo(e.target.value)}>
+          {plans.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name}
+              {p.code === m.plan.code ? " (current)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {target && to !== m.plan.code && (
+        <form onSubmit={save} className="grid gap-4 rounded-2xl border border-line p-4 sm:p-5" noValidate>
+          <p className="text-[0.95rem] text-ink2">
+            Check the details for a {target.name.toLowerCase()} membership. {target.requires_approval ? "GRAAS verifies this type before payment." : ""}
+          </p>
+          <TypeFields audience={target.audience} a={a} />
+          {err && <Notice tone="bad">{err}</Notice>}
+          <div className="flex flex-wrap gap-3">
+            <button className="btn btn-primary !min-h-11" disabled={busy}>
+              {busy ? "Saving…" : `Change to ${target.name}`}
+            </button>
+            <button type="button" className="btn btn-ghost !min-h-11" onClick={() => setTo(m.plan.code)}>
+              Keep {m.plan.name}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/** After payment: the member asks GRAAS to change type; staff approve it, with a fee difference if one applies. */
+function ChangeType({ a, plans, reload }: { a: Account; plans: Plan[]; reload: (msg?: string) => void }) {
+  const m = a.membership;
+  const r = m.change;
+  const options: { code: string; name: string; audience: string; estimate_paise: number | null }[] = m.change_options ?? [];
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState<string>("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const target = plans.find((p) => p.code === to);
+  const est = options.find((o) => o.code === to)?.estimate_paise;
+  const recent = r && (r.status === "done" || r.status === "declined") && (new Date(a.today).getTime() - new Date(r.decided_at ?? r.completed_at ?? r.created_at).getTime()) / 86400000 < 30;
+
+  async function send(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!target) return setErr("Choose the membership you want.");
+    setBusy(true);
+    setErr("");
+    const reason = String(new FormData(e.currentTarget).get("reason") ?? "").trim();
+    const { data } = await sb().rpc("member_request_change", { p_plan_code: to, p_details: formDetails(e.currentTarget), p_reason: reason });
+    setBusy(false);
+    if (!data?.ok) return setErr(data?.error ?? "Could not send the request.");
+    setOpen(false);
+    reload("Your request is sent. GRAAS will reply by email.");
+  }
+  async function cancel() {
+    const { data } = await sb().rpc("member_cancel_change");
+    if (data?.ok) reload("Your change request is cancelled.");
+    else setErr(data?.error ?? "Could not cancel.");
+  }
+  async function pay() {
+    setBusy(true);
+    setMsg("");
+    const o = await portal("create_order", { purpose: "change" });
+    if (!o.ok) {
+      setMsg(o.error ?? "Could not start the payment.");
+      return setBusy(false);
+    }
+    await openCheckout(o, (t) => reload(t === "Payment received. Thank you." ? "Payment received. Your membership type is changed." : t), setBusy, setMsg);
+  }
+
+  if (r && r.status === "pending")
+    return (
+      <div className="grid gap-3 border-t border-line pt-6">
+        <h3 className="h-card">Change of membership type</h3>
+        <Notice>
+          You asked to change from {r.from_name} to {r.to_name} on {shortDate(r.created_at)}. GRAAS is checking it and will reply by email. Your current membership stays active meanwhile.
+        </Notice>
+        <p>
+          <button type="button" className="link text-sm" onClick={cancel}>
+            Cancel this request
+          </button>
+        </p>
+        {err && <Notice tone="bad">{err}</Notice>}
+      </div>
+    );
+  if (r && r.status === "awaiting_payment") {
+    const total = Number(r.charge_paise) + Number(r.gst_paise ?? 0);
+    return (
+      <div className="grid gap-4 border-t border-line pt-6">
+        <h3 className="h-card">Complete your change to {r.to_name}</h3>
+        <p className="text-ink2">
+          GRAAS approved your request. Pay the fee difference to complete it. Your member number {m.member_no} and end date {m.ends_on ? shortDate(m.ends_on) : ""} stay the same.
+        </p>
+        {r.staff_note && <Notice>Note from GRAAS: {r.staff_note}</Notice>}
+        <dl className="rounded-2xl bg-mist px-5 py-3">
+          <div className="flex items-baseline justify-between gap-4 py-2">
+            <dt>Fee difference, {r.from_name} to {r.to_name}</dt>
+            <dd className="readout whitespace-nowrap">{inr(r.charge_paise)}</dd>
+          </div>
+          {Number(r.gst_paise) > 0 && (
+            <div className="flex items-baseline justify-between gap-4 py-2">
+              <dt>GST</dt>
+              <dd className="readout whitespace-nowrap">{inr(r.gst_paise)}</dd>
+            </div>
+          )}
+          <div className="flex items-baseline justify-between gap-4 border-t border-line py-2 text-lg font-semibold">
+            <dt>To pay</dt>
+            <dd className="readout whitespace-nowrap">{inr(total)}</dd>
+          </div>
+        </dl>
+        <div className="flex flex-wrap items-center gap-4">
+          {a.pay_online ? (
+            <button type="button" className="btn btn-primary" onClick={pay} disabled={busy}>
+              {busy ? "Opening payment…" : `Pay ${inr(total)}`}
+            </button>
+          ) : (
+            <Notice tone="warn">Online payment opens shortly. You will be able to pay here.</Notice>
+          )}
+          <button type="button" className="link text-sm" onClick={cancel}>
+            Cancel the change
+          </button>
+        </div>
+        {msg && <Notice tone="warn">{msg}</Notice>}
+        {err && <Notice tone="bad">{err}</Notice>}
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-4 border-t border-line pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="h-card">Change of membership type</h3>
+          <p className="text-ink2">Moved from college to a job, or need a different membership? Ask GRAAS to change it. Your member number stays the same.</p>
+        </div>
+        {!open && (
+          <button type="button" className="btn btn-ghost" onClick={() => setOpen(true)}>
+            Ask for a change
+          </button>
+        )}
+      </div>
+      {recent && r.status === "done" && <Notice tone="good">Your membership was changed to {r.to_name} on {shortDate(r.completed_at)}.</Notice>}
+      {recent && r.status === "declined" && (
+        <Notice tone="warn">
+          Your request to change to {r.to_name} was not approved.{r.staff_note ? ` Reason given: ${r.staff_note}` : ""}
+        </Notice>
+      )}
+      {open && (
+        <form onSubmit={send} className="grid gap-4 rounded-2xl border border-line p-4 sm:p-5" noValidate>
+          <label className={`${lbl} max-w-sm`}>
+            Change to
+            <select className="field" value={to} onChange={(e) => setTo(e.target.value)} required>
+              <option value="" disabled>
+                Choose a membership
+              </option>
+              {options.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {target && (
+            <>
+              <p className="rounded-xl bg-mist px-4 py-3 text-[0.95rem]">
+                {est === null || est === undefined
+                  ? "GRAAS will tell you if a fee difference applies."
+                  : est === 0
+                    ? "No extra fee is expected for this change."
+                    : `Expected fee difference: about ${inr(est)} for the time left on your membership. GRAAS confirms the amount when approving.`}
+              </p>
+              <TypeFields audience={target.audience} a={a} />
+              <label className={lbl}>
+                <span>
+                  Why are you changing? <span className="font-normal text-ink2">(optional)</span>
+                </span>
+                <textarea name="reason" className="field min-h-20" maxLength={500} placeholder="For example: I finished my degree and now work at an automation company." />
+              </label>
+            </>
+          )}
+          {err && <Notice tone="bad">{err}</Notice>}
+          <div className="flex flex-wrap gap-3">
+            <button className="btn btn-primary !min-h-11" disabled={busy || !target}>
+              {busy ? "Sending…" : "Send request"}
+            </button>
+            <button type="button" className="btn btn-ghost !min-h-11" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -425,6 +604,7 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
             </div>
           </dl>
         )}
+        {state === "active" && <ChangeType a={a} plans={plans} reload={reload} />}
         {state === "active" && renewable && (
           <div className="grid gap-3 border-t border-line pt-6">
             <h3 className="h-card">Renew your membership</h3>
@@ -434,17 +614,9 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
         )}
 
         {(state === "pending_approval" || state === "pending_payment") && (
-          <div className="flex flex-wrap items-end gap-3 border-t border-line pt-5">
-            <label className={`${lbl} min-w-52`}>
-              Change membership
-              <select className="field" value={m.plan.code} onChange={(e) => act("member_switch_plan", { p_plan_code: e.target.value })}>
-                {plans.map((p) => (
-                  <option key={p.code} value={p.code}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="grid gap-4 border-t border-line pt-5">
+            <SwitchType a={a} plans={plans} reload={reload} />
+            <div>
             {confirm ? (
               <span className="flex flex-wrap items-center gap-2 text-[0.95rem] font-medium">
                 Withdraw this application?
@@ -456,10 +628,11 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
                 </button>
               </span>
             ) : (
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirm(true)}>
+              <button type="button" className="link text-sm" onClick={() => setConfirm(true)}>
                 Withdraw application
               </button>
             )}
+            </div>
           </div>
         )}
         {err && <Notice tone="bad">{err}</Notice>}
@@ -621,6 +794,66 @@ function Alerts({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
   );
 }
 
+/** Upload, replace or remove the photo used on the member ID and certificate. */
+function PhotoCard({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
+  const p = a.profile;
+  const url = usePhoto(p.id, p.photo_updated_at);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const org = a.membership && !isIndividual(a.membership.plan?.audience);
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true);
+    setErr("");
+    const problem = await uploadPhoto(p.id, file);
+    setBusy(false);
+    if (problem) return setErr(problem);
+    reload(org ? "Logo saved. It now appears on your member ID and certificate." : "Photo saved. It now appears on your member ID and certificate.");
+  }
+  async function remove() {
+    setBusy(true);
+    const problem = await removePhoto(p.id);
+    setBusy(false);
+    if (problem) return setErr(problem);
+    reload(org ? "Logo removed." : "Photo removed.");
+  }
+  return (
+    <div className="card flex flex-wrap items-center gap-5 p-6 sm:p-8">
+      <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-mist ring-1 ring-line">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-3xl font-semibold text-slate5">{initials(p.full_name)}</span>
+        )}
+      </div>
+      <div className="grid min-w-0 flex-1 gap-2">
+        <h2 className="h-card !text-2xl">{org ? "Logo" : "Your photo"}</h2>
+        <p className="text-sm text-ink2">
+          {org
+            ? "Your institution's or company's logo, shown on the member ID and certificate."
+            : "A clear, recent photo of your face, looking at the camera. It is shown on your member ID and certificate, and cropped to a square."}{" "}
+          JPG, PNG or WebP.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className={`btn btn-primary !min-h-10 cursor-pointer ${busy ? "pointer-events-none opacity-60" : ""}`}>
+            {busy ? "Saving…" : url ? "Change" : org ? "Upload logo" : "Upload photo"}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={pick} disabled={busy} />
+          </label>
+          {url && (
+            <button type="button" className="link text-sm" onClick={remove} disabled={busy}>
+              Remove
+            </button>
+          )}
+        </div>
+        {err && <Notice tone="bad">{err}</Notice>}
+      </div>
+    </div>
+  );
+}
+
 function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
   const p = a.profile;
   const [msg, setMsg] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
@@ -631,7 +864,8 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget).entries());
     const phone = String(f.phone).replace(/\D/g, "").slice(-10);
-    const { data } = await sb().rpc("member_update_profile", { p: { ...f, phone } });
+    const guardian_phone = String(f.guardian_phone ?? "").replace(/\D/g, "").slice(-10);
+    const { data } = await sb().rpc("member_update_profile", { p: { ...f, phone, guardian_phone } });
     if (data?.ok) {
       setMsg({ tone: "good", text: phone !== p.phone && p.phone_verified_at ? "Saved. Confirm your new number on WhatsApp from the Overview tab." : "Saved." });
       reload();
@@ -654,10 +888,12 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
     form.reset();
     setPw({ tone: "good", text: "Password changed. We have sent you a note about it." });
   }
-  const org = p.kind === "student" ? "College or institute" : p.kind === "professional" ? "Company or organisation" : "Organisation";
+  const kind = a.membership?.plan?.audience ?? p.kind ?? "";
   return (
     <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-      <form onSubmit={save} className="card grid content-start gap-4 p-6 sm:p-8">
+      <div className="grid content-start gap-5">
+      <PhotoCard a={a} reload={reload} />
+      <form onSubmit={save} className="card grid content-start gap-4 p-6 sm:p-8" noValidate>
         <h2 className="h-card !text-2xl">Your details</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={lbl}>
@@ -692,13 +928,17 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             </select>
           </label>
           <label className={lbl}>
-            {org}
+            {ORG_LABEL[kind] ?? "Organisation"}
             <input name="organisation" className="field" defaultValue={p.organisation ?? ""} maxLength={120} />
           </label>
-          <label className={lbl}>
-            {p.kind === "student" ? "Course and year" : "Designation"}
-            <input name="designation" className="field" defaultValue={p.designation ?? ""} maxLength={120} />
-          </label>
+          {kind !== "student" && (
+            <label className={lbl}>
+              {ROLE_LABEL[kind] ?? "Designation"}
+              <input name="designation" className="field" defaultValue={p.designation ?? ""} maxLength={120} placeholder={ROLE_HINT[kind]} />
+            </label>
+          )}
+          {isIndividual(kind) && <PersonFields audience={kind} options={a.options ?? EMPTY_OPTIONS} initial={p} lbl={lbl} />}
+          {isIndividual(kind) && isMinor(p.dob, a.today) && <GuardianFields initial={p} lbl={lbl} />}
           <label className={`${lbl} sm:col-span-2`}>
             <span>
               Website <span className="font-normal text-ink2">(optional)</span>
@@ -710,7 +950,9 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
           <button className="btn btn-primary">Save details</button>
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         </div>
+        <p className="text-sm text-ink2">Your member ID and certificate always show the details saved here.</p>
       </form>
+      </div>
       <div className="grid content-start gap-5">
         <Alerts a={a} reload={reload} />
         <form onSubmit={changePassword} className="card grid content-start gap-4 p-6 sm:p-8">
@@ -843,8 +1085,8 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
       .then(({ data }) => setOrg(data?.value ?? null));
   }, [session, load, router]);
 
-  if (!session || !a) return <div className="shell py-24 text-ink2">Loading your account…</div>;
-  if (!a.profile) return <div className="shell py-24 text-ink2">Your account could not be loaded. Please sign out and sign in again.</div>;
+  if (!session || !a) return <div className="shell py-16 text-ink2">Loading your account…</div>;
+  if (!a.profile) return <div className="shell py-16 text-ink2">Your account could not be loaded. Please sign out and sign in again.</div>;
 
   const m = a.membership;
   const state = effectiveStatus(m, a.today);
@@ -866,7 +1108,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
 
   return (
     <section className="min-h-[70vh] bg-mist">
-      <div className="shell py-8 lg:py-12">
+      <div className="shell py-8 lg:py-9">
         <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
           <div>
             <p className="text-sm text-ink2">My account</p>
@@ -906,11 +1148,24 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
           {tab === "card" && hasId && (
             <div className="card grid gap-6 p-6 sm:p-8">
               <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <h2 className="h-card !text-2xl">Digital member ID</h2>
+                <div>
+                  <h2 className="h-card !text-2xl">Digital member ID</h2>
+                  <p className="text-ink2">Prints at bank-card size, front and back. Cut along the edges and keep it in your wallet.</p>
+                </div>
                 <PrintButton label="Print or save as PDF" />
               </div>
-              <IdCard a={a} />
-              <p className="max-w-xl text-ink2 print:hidden">Anyone can scan the code, or type your member number at {typeof window !== "undefined" ? window.location.host : ""}/verify, to confirm that this membership is current.</p>
+              {!a.profile.photo_updated_at && (
+                <div className="print:hidden">
+                  <Notice tone="warn">
+                    Add {isIndividual(m?.plan?.audience) ? "your photo" : "your logo"} to complete your member ID.{" "}
+                    <button type="button" className="font-semibold underline decoration-2 underline-offset-4" onClick={() => setTab("profile")}>
+                      Go to Profile
+                    </button>
+                  </Notice>
+                </div>
+              )}
+              <IdCards a={a} org={org} />
+              <p className="max-w-2xl text-ink2 print:hidden">Anyone can scan the code on the back, or type your member number at {typeof window !== "undefined" ? window.location.host : ""}/verify, to confirm that this membership is current. The card always shows your latest details and membership type.</p>
             </div>
           )}
           {tab === "certificate" && hasId && (
@@ -919,7 +1174,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
                 <h2 className="h-card !text-2xl">Membership certificate</h2>
                 <PrintButton label="Print or save as PDF" />
               </div>
-              <Certificate a={a} />
+              <Certificate a={a} org={org} />
             </div>
           )}
           {tab === "payments" &&
@@ -942,7 +1197,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
                       <div>
                         <p className="font-semibold">
-                          {o.plan_name} membership{o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}{o.kind === "renewal" ? ", renewal" : ""}
+                          {o.kind === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
                         </p>
                         <p className="text-sm text-ink2">
                           {shortDate(o.paid_at ?? o.created_at)}

@@ -41,7 +41,7 @@ export default async function UpdatesPreview() {
             All updates
           </Link>
         </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-[1.15fr_1fr]">
+        <div className="mt-7 grid gap-5 lg:grid-cols-[1.15fr_1fr]">
           <PostCard post={first} lead />
           <div className="grid gap-5">
             {rest.map((p) => (

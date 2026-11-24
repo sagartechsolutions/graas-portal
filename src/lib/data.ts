@@ -45,6 +45,22 @@ export async function getTerms(): Promise<Term[]> {
   }
 }
 
+export type ProfileOptionsData = { genders: string[]; courses: { name: string; years: string[]; branches: boolean }[]; branches: string[] };
+
+/** Dropdown lists for member details (gender, course, year, branch), set by staff in Admin. */
+export async function getProfileOptions(): Promise<ProfileOptionsData> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("settings");
+  const empty: ProfileOptionsData = { genders: [], courses: [], branches: [] };
+  try {
+    const { data } = await publicClient().from("site_settings").select("value").eq("key", "profile_options").maybeSingle();
+    return { ...empty, ...((data?.value as Partial<ProfileOptionsData>) ?? {}) };
+  } catch {
+    return empty;
+  }
+}
+
 export type Graascon = { year: number; dates: string | null; venue: string | null; cfp_url: string | null };
 
 export async function getGraascon(): Promise<Graascon> {

@@ -23,7 +23,7 @@ export default function Hero() {
         </g>
       </svg>
 
-      <div className="shell relative grid items-center gap-14 pb-24 pt-8 lg:grid-cols-[1.08fr_1fr] lg:gap-8 2xl:gap-16 lg:pb-32 lg:pt-14">
+      <div className="shell relative grid items-center gap-10 pb-14 pt-8 lg:grid-cols-[1.08fr_1fr] lg:gap-8 2xl:gap-10 lg:pb-32 lg:pt-10">
         <div>
           <p className="chip">
             <span className="dot dot-live" />
@@ -44,7 +44,7 @@ export default function Hero() {
               See member benefits
             </Link>
           </div>
-          <dl className="mt-12 grid max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
+          <dl className="mt-8 grid max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
             {OPEN_TO.map((o) => (
               <div key={o.label}>
                 <span aria-hidden="true" className="mb-2.5 flex h-[25px] items-end">

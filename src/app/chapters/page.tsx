@@ -17,7 +17,7 @@ export default function Page() {
         { heading: "What a chapter gets", points: ["Its own workspace: roster, announcements, events", "Lectures and competitions it can host on campus", "A public chapter page and a place on the leaderboard", "Membership for a whole batch in one step"] },
         { heading: "What a chapter does", points: ["Runs workshops, talks and build sessions", "Sends teams to GRAAS competitions", "Files a short monthly activity report", "Hands over to new officers every year"] },
         { heading: "Scored on real activity", body: "Chapters are ranked by events held, active members and courses completed. Sign-up counts alone do not move a chapter up." },
-        { heading: "For schools", body: "School chapters are run by a teacher-coordinator. Students under 18 join only with a parent's consent, which the portal collects and records." },
+        { heading: "For schools", body: "School chapters are run by a teacher-coordinator. Students under 18 join with a parent's or guardian's agreement, which the portal records." },
       ]}
     />
   );

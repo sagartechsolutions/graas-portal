@@ -210,8 +210,8 @@ export default function PreRegister({
   const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
 
   return (
-    <section id="join" className="px-3 py-14 sm:px-6 lg:py-20">
-      <div className="relative mx-auto max-w-[1800px] overflow-hidden rounded-[28px] bg-ink px-5 py-12 text-white sm:px-10 sm:py-16 lg:rounded-[40px] lg:px-16 lg:py-20">
+    <section id="join" className="px-3 py-10 sm:px-6 lg:py-12">
+      <div className="relative mx-auto max-w-[1800px] overflow-hidden rounded-[28px] bg-ink px-5 py-9 text-white sm:px-10 sm:py-10 lg:rounded-[40px] lg:px-16 lg:py-12">
         <LogoMark
           size={560}
           tone="light"
@@ -233,7 +233,7 @@ export default function PreRegister({
               <Pass r={done} />
             </div>
           ) : (
-            <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10">
               <div>
                 {contact ? (
                   <h1 className="h-section">{title}</h1>
@@ -242,7 +242,7 @@ export default function PreRegister({
                 )}
                 <p className="lede mt-5 !text-white/75">{intro}</p>
                 {!contact && (
-                  <ol className="mt-10 grid gap-6">
+                  <ol className="mt-7 grid gap-6">
                     {STEPS.map((s, i) => (
                       <li key={s.title} className="flex gap-4">
                         <span className="readout flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 text-sm">
@@ -400,8 +400,8 @@ export default function PreRegister({
                   />
                   <span>
                     {kind === "parent"
-                      ? "I am 18 or older and the parent or guardian of the student."
-                      : "I am 18 or older."}
+                      ? "I am the parent or guardian of the student."
+                      : "The details above are true."}
                   </span>
                 </label>
                 <label className="flex items-start gap-3 text-[0.95rem]">

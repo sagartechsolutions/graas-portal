@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { portal } from "@/lib/browser";
 import { STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
+import { usePhoto } from "@/components/member/Details";
 import { Badge, Msg, STATUS_TONE, downloadCsv, istToday, lbl, sb, small } from "./shared";
 
 type Row = { id: string; user_id: string; status: string; member_no: string | null; organisation: string | null; applied_at: string; approved_at: string | null; activated_at: string | null; starts_on: string | null; ends_on: string | null; is_complimentary: boolean; staff_note: string | null; decision_reason: string | null; profile: any; plan: any };
@@ -80,6 +81,7 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
       <dd className="break-words font-medium">{v || "—"}</dd>
     </div>
   );
+  const photo = usePhoto(row.user_id, p.photo_updated_at);
   const available = Object.entries(ACTIONS).filter(([, a]) => a.when.includes(row.status) && (!a.superOnly || role === "super_admin"));
 
   return (
@@ -88,6 +90,14 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
         Back to members
       </button>
       <div className="flex flex-wrap items-center gap-3">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-mist text-slate5 ring-1 ring-line">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photo} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="px-1 text-center text-[0.65rem] font-medium leading-tight">No photo</span>
+          )}
+        </span>
         <h3 className="text-2xl font-semibold tracking-tight">{p.full_name ?? p.email}</h3>
         <Badge tone={STATUS_TONE[state]}>{STATUS_LABEL[state]}</Badge>
         {row.is_complimentary && <Badge>No fee charged</Badge>}
@@ -108,8 +118,12 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
             )}
             {item("Date of birth", shortDate(p.dob))}
             {item("City and state", [p.city, p.state].filter(Boolean).join(", "))}
-            {item("College, institution or company", row.organisation ?? p.organisation)}
-            {item("Course or designation", p.designation)}
+            {item("Gender", p.gender)}
+            {item("School, college, institution or company", p.organisation ?? row.organisation)}
+            {row.plan?.audience === "student" ? item("Course", p.course) : item("Designation", p.designation)}
+            {row.plan?.audience === "student" && item("Branch", p.branch)}
+            {row.plan?.audience === "student" && item("Year of study", p.study_year)}
+            {p.guardian_name && item("Parent or guardian", `${p.guardian_name}, ${p.guardian_phone ?? ""}${p.guardian_consent_at ? ` (agreed ${shortDate(p.guardian_consent_at)})` : ""}`)}
             {item("Website", p.website)}
             {item("Account created", shortDate(p.created_at))}
             {item("Invite code", p.referral_code)}
@@ -229,6 +243,10 @@ export function Members({ role }: { role: string }) {
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
   const [aud, setAud] = useState("");
+  const [course, setCourse] = useState("");
+  const [branch, setBranch] = useState("");
+  const [year, setYear] = useState("");
+  const [gender, setGender] = useState("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const today = useMemo(() => istToday(), []);
@@ -259,8 +277,14 @@ export function Members({ role }: { role: string }) {
   );
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return rows.filter((r) => match(r, filter) && (!aud || r.plan?.audience === aud) && (!s || [r.profile?.full_name, r.profile?.email, r.profile?.phone, r.member_no, r.organisation, r.profile?.city].some((v) => String(v ?? "").toLowerCase().includes(s))));
-  }, [rows, filter, aud, q, match]);
+    return rows.filter((r) => match(r, filter) && (!aud || r.plan?.audience === aud) && (!course || r.profile?.course === course) && (!branch || r.profile?.branch === branch) && (!year || r.profile?.study_year === year) && (!gender || r.profile?.gender === gender) && (!s || [r.profile?.full_name, r.profile?.email, r.profile?.phone, r.member_no, r.organisation, r.profile?.city].some((v) => String(v ?? "").toLowerCase().includes(s))));
+  }, [rows, filter, aud, course, branch, year, gender, q, match]);
+  const values = (k: string) => [...new Set(rows.map((r) => r.profile?.[k]).filter(Boolean))].sort() as string[];
+  const tally = (k: string) => {
+    const m = new Map<string, number>();
+    for (const r of shown) if (r.profile?.[k]) m.set(r.profile[k], (m.get(r.profile[k]) ?? 0) + 1);
+    return [...m.entries()].sort((x, y) => y[1] - x[1]);
+  };
 
   const open = rows.find((r) => r.id === openId);
   if (open) return <Detail key={open.id} row={open} role={role} today={today} onBack={() => setOpenId(null)} onChanged={load} />;
@@ -292,13 +316,29 @@ export function Members({ role }: { role: string }) {
             <option value="industry">Industry</option>
           </select>
         </label>
+        {[
+          ["Course", course, setCourse, "course"],
+          ["Branch", branch, setBranch, "branch"],
+          ["Year", year, setYear, "study_year"],
+          ["Gender", gender, setGender, "gender"],
+        ].map(([label, val, set, key]) => (
+          <label key={label as string} className={lbl}>
+            {label as string}
+            <select className="field !min-h-10 max-w-52" value={val as string} onChange={(e) => (set as (v: string) => void)(e.target.value)}>
+              <option value="">All</option>
+              {values(key as string).map((v) => (
+                <option key={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+        ))}
         <button
           type="button"
           className="btn btn-quiet !min-h-10 !py-2"
           onClick={() =>
             downloadCsv("graas-members", [
-              ["Member number", "Name", "Email", "Mobile", "Plan", "Status", "Organisation", "City", "State", "Applied", "Active from", "Valid until"],
-              ...shown.map((r) => [r.member_no, r.profile?.full_name, r.profile?.email, r.profile?.phone, r.plan?.name, STATUS_LABEL[effectiveStatus(r, today)], r.organisation ?? r.profile?.organisation, r.profile?.city, r.profile?.state, shortDate(r.applied_at), shortDate(r.starts_on), shortDate(r.ends_on)]),
+              ["Member number", "Name", "Email", "Mobile", "Plan", "Status", "Gender", "Organisation", "Designation", "Course", "Branch", "Year of study", "Date of birth", "Parent or guardian", "Guardian mobile", "City", "State", "Applied", "Active from", "Valid until"],
+              ...shown.map((r) => [r.member_no, r.profile?.full_name, r.profile?.email, r.profile?.phone, r.plan?.name, STATUS_LABEL[effectiveStatus(r, today)], r.profile?.gender, r.profile?.organisation ?? r.organisation, r.profile?.designation, r.profile?.course, r.profile?.branch, r.profile?.study_year, r.profile?.dob, r.profile?.guardian_name, r.profile?.guardian_phone, r.profile?.city, r.profile?.state, shortDate(r.applied_at), shortDate(r.starts_on), shortDate(r.ends_on)]),
             ])
           }
         >
@@ -307,6 +347,27 @@ export function Members({ role }: { role: string }) {
       </div>
       {err && <p role="alert" className="mt-3 font-semibold text-[#8f1a11]">{err}</p>}
       <p className="mt-4 text-sm text-ink2">{loading ? "Loading…" : `Showing ${shown.length} of ${rows.length}`}</p>
+      {shown.some((r) => r.profile?.course) && (
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {[
+            ["By course", tally("course")],
+            ["By branch", tally("branch")],
+            ["By gender", tally("gender")],
+          ].map(([t, list]) => (
+            <div key={t as string} className="plate-soft p-4">
+              <p className="text-sm font-semibold">{t as string}</p>
+              <ul className="mt-2 grid gap-1 text-sm">
+                {(list as [string, number][]).slice(0, 8).map(([k, n]) => (
+                  <li key={k} className="flex justify-between gap-3">
+                    <span className="truncate">{k}</span>
+                    <span className="readout">{n}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="plate mt-2 overflow-x-auto">
         <table className="w-full min-w-[900px] text-left text-[0.95rem]">
           <thead className="border-b border-line text-sm text-ink2">

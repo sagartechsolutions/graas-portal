@@ -251,7 +251,7 @@ export default function Lab() {
             <p className="lede mt-4">Three small machines that run right here on this page. Each is a first lesson from what members learn.</p>
           </div>
         </div>
-        <div className="card mt-10 overflow-hidden shadow-[var(--shadow-card)]">
+        <div className="card mt-7 overflow-hidden shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-3 sm:px-5">
             <div role="tablist" aria-label="Demonstrations" className="flex gap-1 overflow-x-auto rounded-full bg-mist p-1" onKeyDown={onKey}>
               {TABS.map((t, i) => (

@@ -12,7 +12,7 @@ const cols = [
 export default function Footer() {
   return (
     <footer className="mt-auto bg-ink text-white">
-      <div className="shell grid gap-12 py-16 lg:grid-cols-[1.4fr_2fr]">
+      <div className="shell grid gap-8 py-10 lg:grid-cols-[1.4fr_2fr]">
         <div>
           <Logo tone="light" full />
           <p className="mt-6 max-w-sm text-white/70">A society for people who learn, teach, build and hire in robotics and automation.</p>

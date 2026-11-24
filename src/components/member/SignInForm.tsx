@@ -32,7 +32,7 @@ export default function SignInForm() {
 
   return (
     <section className="bg-mist">
-      <div className="mx-auto w-full max-w-md px-5 py-16 sm:py-24">
+      <div className="mx-auto w-full max-w-md px-5 py-10 sm:py-16">
         <h1 className="h-section">Sign in</h1>
         <p className="mt-3 text-ink2">For GRAAS members and applicants.</p>
         <form onSubmit={submit} className="card mt-8 grid gap-4 p-6 shadow-[var(--shadow-card)] sm:p-8">

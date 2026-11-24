@@ -1,12 +1,14 @@
+import type { CSSProperties } from "react";
+
 /**
  * The GRAAS mark: four rising bars and the green dot, traced from the official logo.
  * `tone="light"` is for dark backgrounds, where the navy bar would disappear.
  */
-export function LogoMark({ size = 36, tone = "dark", animate = false, className = "" }: { size?: number; tone?: "dark" | "light"; animate?: boolean; className?: string }) {
+export function LogoMark({ size = 36, tone = "dark", animate = false, className = "", style }: { size?: number; tone?: "dark" | "light"; animate?: boolean; className?: string; style?: CSSProperties }) {
   const fills = tone === "dark" ? ["#b7babf", "#8e919a", "#5a616b", "#000e21"] : ["rgba(255,255,255,.38)", "rgba(255,255,255,.58)", "rgba(255,255,255,.8)", "#ffffff"];
   const base = tone === "dark" ? "#010d21" : "#ffffff";
   return (
-    <svg width={size} height={(size * 340) / 382} viewBox="80 38 382 340" className={className} aria-hidden="true">
+    <svg width={size} height={(size * 340) / 382} viewBox="80 38 382 340" className={className} style={style} aria-hidden="true">
       <g className={animate ? "bars-rise" : undefined}>
         <path d="M114 364V279L139.5 246L165 279V364Z" fill={fills[0]} />
         <path d="M200 364V220L225 186L250 220V364Z" fill={fills[1]} />

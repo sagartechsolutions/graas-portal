@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Verify a member", description: "Chec
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="shell py-24 text-ink2">Loading…</div>}>
+    <Suspense fallback={<div className="shell py-16 text-ink2">Loading…</div>}>
       <VerifyApp />
     </Suspense>
   );

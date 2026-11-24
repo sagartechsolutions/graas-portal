@@ -18,7 +18,7 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
   const [plans, terms] = await Promise.all([getPlans(), getTerms()]);
   const longer = terms.filter((t) => t.years > 1);
   return (
-    <section id="plans" className={heading ? "section" : "pb-20"}>
+    <section id="plans" className={heading ? "section" : "pb-12"}>
       <div className="shell">
         {heading && (
           <div className="max-w-3xl">
@@ -26,7 +26,7 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
             <p className="lede mt-4">Four ways to join. Each fee is shown here and again before you pay.</p>
           </div>
         )}
-        <ul className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-4 ${heading ? "mt-12" : ""}`}>
+        <ul className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-4 ${heading ? "mt-8" : ""}`}>
           {plans.map((p) => (
             <li key={p.code} className="card card-lift flex flex-col p-6 sm:p-7">
               <span aria-hidden="true" className="flex h-8 items-end">
@@ -87,7 +87,7 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
             </li>
           ))}
         </ul>
-        {plans.length === 0 && <p className="mt-10 text-ink2">Membership plans will be published here shortly.</p>}
+        {plans.length === 0 && <p className="mt-7 text-ink2">Membership plans will be published here shortly.</p>}
       </div>
     </section>
   );

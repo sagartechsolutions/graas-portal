@@ -41,7 +41,7 @@ export default function InfoPage({
   const p = PHOTOS[photo ?? BY_INTEREST[interest ?? ""] ?? "bluearm"];
   return (
     <>
-      <section className="shell grid items-center gap-10 pb-16 pt-8 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pb-24 lg:pt-14">
+      <section className="shell grid items-center gap-7 pb-10 pt-8 lg:grid-cols-[1.1fr_1fr] lg:gap-10 lg:pb-14 lg:pt-10">
         <div>
           {status && (
             <p className="chip">
@@ -85,9 +85,9 @@ export default function InfoPage({
             ))}
           </div>
           {steps && (
-            <div className="mt-20">
+            <div className="mt-12">
               <h2 className="h-section">{stepsTitle}</h2>
-              <ol className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <ol className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
                 {steps.map((s, i) => (
                   <li key={s} className="card p-6">
                     <span className="readout flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm text-white">{i + 1}</span>

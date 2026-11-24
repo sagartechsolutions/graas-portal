@@ -33,13 +33,13 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
 
   return (
     <>
-      <ul className="mt-12 columns-2 gap-4 lg:columns-3 [&>li]:mb-4">
+      <ul className="mt-8 columns-2 gap-4 lg:columns-3 [&>li]:mb-4">
         {items.map((g, i) => (
           <li key={g.id} className="break-inside-avoid">
             <button type="button" onClick={() => setOpen(i)} className="group relative block w-full overflow-hidden rounded-2xl bg-mist text-left" style={{ aspectRatio: g.width && g.height ? `${g.width} / ${g.height}` : "3 / 2" }} aria-label={`Open photo: ${g.caption ?? "untitled"}`}>
               <Photo src={g.image_url} alt={g.caption ?? ""} sizes="(min-width: 1024px) 400px, 50vw" className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-[1.04]" />
               {g.caption && (
-                <span className="absolute inset-x-0 bottom-0 hidden translate-y-2 bg-gradient-to-t from-ink/80 to-transparent p-4 pt-10 text-sm font-medium text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 sm:block">
+                <span className="absolute inset-x-0 bottom-0 hidden translate-y-2 bg-gradient-to-t from-ink/80 to-transparent p-4 pt-7 text-sm font-medium text-white opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 sm:block">
                   {g.caption}
                 </span>
               )}

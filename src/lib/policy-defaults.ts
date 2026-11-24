@@ -13,11 +13,11 @@ export const POLICY_DEFAULTS: Policy[] = [
     summary: "Who can join, how membership starts, what it includes and how it can end.",
     effective_on: EFFECTIVE,
     body: `## 1. Who can be a member
-- Student membership: a person aged 18 or older enrolled in a diploma, degree or postgraduate course.
+- Student membership: a person enrolled in a school, diploma, degree or postgraduate course.
 - Professional membership: working engineers, technicians, faculty, researchers and others working in or entering the field.
 - Institution membership: schools, colleges, universities and training institutes, represented by an authorised staff member.
 - Industry membership: companies and firms, represented by an authorised employee.
-- Students under 18 take part through their school, or with a parent's or guardian's written consent. They cannot open an account themselves.
+- Students of any age may join. A student under 18 joins with the agreement of a parent or guardian, whose name and mobile number are given when applying.
 
 ## 2. Applying
 - Apply on this website with true and complete details. One person, one account.
@@ -68,7 +68,7 @@ GRAAS is a place to learn and build. Everyone taking part, online or in person, 
 ## Respect
 - Treat every person with courtesy, whatever their gender, age, religion, caste, region, language, disability or level of skill.
 - No harassment, bullying, threats, sexual remarks or unwelcome contact, in any form.
-- Students under 18 are contacted only through their school or parent, and only for programme purposes.
+- Members under 18 are contacted only for programme purposes, and their parent or guardian may be copied in.
 
 ## Honesty in work
 - Present only your own work, or credit the people whose work you used.
@@ -141,7 +141,7 @@ GRAAS is a place to learn and build. Everyone taking part, online or in person, 
 
 ## Your account
 - Give accurate details and keep them up to date. Keep your password private. You are responsible for what is done through your account.
-- You must be 18 or older to open an account. Tell us at once if you think someone else has used yours.
+- If you are under 18, you open an account with the agreement of your parent or guardian. Tell us at once if you think someone else has used your account.
 - We may suspend an account that is used to break these terms or the law.
 
 ## Payments
@@ -174,7 +174,7 @@ GRAAS is a place to learn and build. Everyone taking part, online or in person, 
     summary: "What we collect, why, who sees it and the choices you have.",
     effective_on: EFFECTIVE,
     body: `## What we collect
-- Account and application details: name, email, mobile number, date of birth (to confirm you are 18 or older), city and state, your college, institution or company, and your course or role.
+- Account and application details: name, email, mobile number, date of birth, gender, city and state, your college, institution or company, and your course, branch and year of study or your role. For members under 18, the name and mobile number of a parent or guardian.
 - Membership records: plan, status, member number, dates, and messages you send to our help desk.
 - Payment records: amount, date, Razorpay order and payment references, and the type of payment method. Card numbers, UPI PINs and bank passwords are entered on Razorpay's page and never reach GRAAS.
 - Enquiries: what you type into the contact form.
@@ -202,7 +202,7 @@ GRAAS is a place to learn and build. Everyone taking part, online or in person, 
 - Stop promotional messages at any time by replying to one or writing to us. Messages about your own membership and payments will still reach you.
 
 ## Children
-- Accounts are for people aged 18 or older. Students under 18 take part through a school or parent, who give consent and contact details.
+- Students under 18 may open an account with the agreement of a parent or guardian, whose name and mobile number we record with the date of agreement. A parent or guardian may ask us to see, correct or delete the child's data at any time.
 
 ## Security
 - Access is controlled by sign-in and by role. Staff actions on memberships, fees and settings are recorded in an activity log. Data travels over encrypted connections.

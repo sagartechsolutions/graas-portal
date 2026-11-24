@@ -43,11 +43,11 @@ async function Article({ params }: Pick<PageProps<"/updates/[slug]">, "params">)
       <h1 className="h-section mt-4">{post.title}</h1>
       {post.summary && <p className="lede mt-5 !max-w-none">{post.summary}</p>}
       {post.cover_url && (
-        <div className="mt-10 aspect-[16/9] overflow-hidden rounded-[24px]">
+        <div className="mt-7 aspect-[16/9] overflow-hidden rounded-[24px]">
           <Photo src={post.cover_url} alt="" eager sizes="(min-width: 800px) 768px, 100vw" className="h-full w-full" />
         </div>
       )}
-      <div className="mt-10 grid gap-5 text-lg leading-relaxed">
+      <div className="mt-7 grid gap-5 text-lg leading-relaxed">
         {(post.body ?? "")
           .split(/\n{2,}/)
           .map((para) => para.trim())
@@ -65,7 +65,7 @@ async function Article({ params }: Pick<PageProps<"/updates/[slug]">, "params">)
 export default function Page({ params }: PageProps<"/updates/[slug]">) {
   return (
     <>
-      <section className="mx-auto w-full max-w-3xl px-5 pb-20 pt-8 sm:px-8 lg:pb-28 lg:pt-12">
+      <section className="mx-auto w-full max-w-3xl px-5 pb-12 pt-8 sm:px-8 lg:pb-16 lg:pt-8">
         <p className="mb-8">
           <Link href="/updates" className="link text-[0.95rem]">
             All updates

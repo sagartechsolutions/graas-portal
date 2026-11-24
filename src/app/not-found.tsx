@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <section className="shell flex min-h-[60vh] flex-col justify-center py-24">
+    <section className="shell flex min-h-[60vh] flex-col justify-center py-16">
       <p className="chip self-start">
         <span className="dot" />
         Page not found

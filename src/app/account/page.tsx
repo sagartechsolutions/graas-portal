@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "My account", robots: { index: false,
 export default async function Page() {
   const plans = await getPlans();
   return (
-    <Suspense fallback={<div className="shell py-24 text-ink2">Loading…</div>}>
+    <Suspense fallback={<div className="shell py-16 text-ink2">Loading…</div>}>
       <AccountApp plans={plans} />
     </Suspense>
   );

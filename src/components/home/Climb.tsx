@@ -20,12 +20,12 @@ export default function Climb() {
   return (
     <section className="section overflow-hidden">
       <div className="shell">
-        <div className="grid gap-5 lg:grid-cols-2 lg:items-end lg:gap-16">
+        <div className="grid gap-5 lg:grid-cols-2 lg:items-end lg:gap-10">
           <h2 className="h-section">The GRAAS logo is the member’s path.</h2>
           <p className="lede lg:justify-self-end">Four bars, each taller than the last, with a green dot at the peak. Read left to right, it is what a member does.</p>
         </div>
 
-        <div ref={ref} className="mt-20 sm:mt-24">
+        <div ref={ref} className="mt-12 sm:mt-24">
           <div className="relative flex h-[230px] items-end gap-2.5 sm:h-[360px] sm:gap-4 lg:h-[470px] lg:gap-5 2xl:h-[580px]">
             {STAGES.map((s, i) => (
               <div key={s.name} className="relative flex h-full flex-1 items-end">

@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy policy", description: "How G
 
 export default function Page() {
   return (
-    <section className="shell pb-20 pt-10 lg:pb-28 lg:pt-14">
+    <section className="shell pb-12 pt-7 lg:pb-16 lg:pt-10">
       <PolicyArticle slug="privacy" />
     </section>
   );

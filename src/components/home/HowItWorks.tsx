@@ -35,7 +35,7 @@ export default function HowItWorks() {
             Become a member
           </Link>
         </div>
-        <div ref={ref} className="relative mt-12" onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)}>
+        <div ref={ref} className="relative mt-8" onPointerEnter={() => setHeld(true)} onPointerLeave={() => setHeld(false)}>
           <div aria-hidden="true" className="absolute left-0 right-0 top-[1.4rem] hidden h-0.5 bg-line lg:block">
             <div className="h-full bg-ink transition-[width] duration-700 ease-out" style={{ width: `${(at / (STEPS.length - 1)) * 100}%` }} />
           </div>

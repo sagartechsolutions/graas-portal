@@ -6,11 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { browserClient, portal } from "@/lib/browser";
 import { INDIAN_STATES, inr } from "@/lib/money";
 import type { Plan } from "@/lib/site";
+import { GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, isMinor, type ProfileOptions } from "./Details";
 import { Alert, CodeForm } from "./Verify";
-
-const ORG_LABEL: Record<string, string> = { student: "College or institute", professional: "Company or organisation", institution: "Name of the institution", industry: "Name of the company" };
-const ROLE_LABEL: Record<string, string> = { student: "Course and year", professional: "Designation", institution: "Your designation there", industry: "Your designation there" };
-const ROLE_HINT: Record<string, string> = { student: "For example B.E. Mechanical, 3rd year", professional: "For example Automation engineer", institution: "For example Head of department", industry: "For example HR manager" };
 const term = (m: number | null) => (m === null ? "one time" : m === 12 ? "per year" : m % 12 === 0 ? `for ${m / 12} years` : `for ${m} months`);
 
 export function planFee(p: Plan) {
@@ -19,7 +16,7 @@ export function planFee(p: Plan) {
   return `${inr(Math.round(Number(p.price_inr) * 100))} ${term(p.duration_months)}${p.gst_percent > 0 ? ` + ${p.gst_percent}% GST` : ""}`;
 }
 
-export default function JoinApp({ plans }: { plans: Plan[] }) {
+export default function JoinApp({ plans, options }: { plans: Plan[]; options: ProfileOptions }) {
   const router = useRouter();
   const params = useSearchParams();
   const [code, setCode] = useState(() => (plans.some((p) => p.code === params.get("plan")) ? params.get("plan")! : (plans[0]?.code ?? "")));
@@ -27,6 +24,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ field?: string; error: string } | null>(null);
   const [verify, setVerify] = useState<{ email: string; sent: boolean } | null>(null);
+  const [dob, setDob] = useState("");
   const plan = useMemo(() => plans.find((p) => p.code === code) ?? plans[0], [plans, code]);
   const individual = plan?.audience === "student" || plan?.audience === "professional";
 
@@ -50,10 +48,11 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
     if (f.get("accept") !== "on") return setErr({ field: "accept", error: "Please accept the membership rules and policies to continue." });
     setBusy(true);
     const sb = browserClient();
+    const details = { gender: v("gender"), course: v("course"), branch: v("branch"), study_year: v("study_year"), designation: v("designation") };
     if (signedIn) {
-      const { data } = await sb.rpc("member_apply", { p_plan_code: code, p_org: v("organisation") });
+      const { data } = await sb.rpc("member_apply", { p_plan_code: code, p_org: v("organisation"), p_details: details });
       if (data?.ok) return router.push("/account?welcome=1");
-      setErr({ error: data?.error ?? "Could not save the application. Please try again." });
+      setErr({ field: data?.field, error: data?.error ?? "Could not save the application. Please try again." });
       return setBusy(false);
     }
     if (v("password") !== v("password2")) {
@@ -69,8 +68,11 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
       city: v("city"),
       state: v("state"),
       organisation: v("organisation"),
-      designation: v("designation"),
       website: v("org_website"),
+      ...details,
+      guardian_name: v("guardian_name"),
+      guardian_phone: v("guardian_phone"),
+      guardian_agree: f.get("guardian_agree") === "on",
       password: String(f.get("password") ?? ""),
       ref: params.get("ref") ?? "",
       accept: true,
@@ -94,7 +96,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
   const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
   if (plans.length === 0)
     return (
-      <section className="shell py-24">
+      <section className="shell py-16">
         <h1 className="h-section">Membership plans are being prepared.</h1>
         <p className="lede mt-4">Please check back shortly.</p>
       </section>
@@ -103,7 +105,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
   if (verify)
     return (
       <section className="bg-mist">
-        <div className="mx-auto w-full max-w-xl px-5 py-14 sm:py-20">
+        <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-12">
           <p className="text-sm font-semibold text-go-deep">Account created, application saved</p>
           <h1 className="h-section mt-2">Check your email</h1>
           <p className="lede mt-3">
@@ -126,7 +128,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
 
   return (
     <section className="bg-mist">
-      <div className="shell grid gap-10 pb-20 pt-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-14 lg:pb-28 lg:pt-14">
+      <div className="shell grid gap-7 pb-12 pt-7 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)] lg:gap-10 lg:pb-16 lg:pt-10">
         <div>
           <h1 className="h-display !text-[clamp(2.3rem,1.5rem+3.2vw,3.8rem)]">Become a member</h1>
           <p className="lede mt-4">
@@ -136,7 +138,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
             </Link>
           </p>
 
-          <form onSubmit={submit} className="mt-10 grid gap-8" noValidate>
+          <form onSubmit={submit} className="mt-7 grid gap-8" noValidate>
             <fieldset>
               <legend className="h-card">1. Choose your membership</legend>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -178,7 +180,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
                   {individual && (
                     <label className={lbl}>
                       Date of birth
-                      <input name="dob" className="field" type="date" autoComplete="bday" required {...bad("dob")} />
+                      <input name="dob" className="field" type="date" autoComplete="bday" required value={dob} onChange={(e) => setDob(e.target.value)} {...bad("dob")} />
                     </label>
                   )}
                   <label className={lbl}>
@@ -201,12 +203,14 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
                   {ORG_LABEL[plan.audience]}
                   <input name="organisation" className="field" autoComplete="organization" maxLength={120} required {...bad("organisation")} />
                 </label>
-                {!signedIn && (
+                {ROLE_LABEL[plan.audience] && (
                   <label className={lbl}>
                     {ROLE_LABEL[plan.audience]}
                     <input name="designation" className="field" maxLength={120} placeholder={ROLE_HINT[plan.audience]} />
                   </label>
                 )}
+                <PersonFields key={plan.audience} audience={plan.audience} options={options} bad={bad} lbl={lbl} />
+                {!signedIn && individual && isMinor(dob) && <GuardianFields bad={bad} lbl={lbl} withAgree />}
                 {!signedIn && !individual && (
                   <label className={`${lbl} sm:col-span-2`}>
                     <span>
@@ -246,7 +250,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
               <label className="flex items-start gap-3 text-[0.95rem]">
                 <input type="checkbox" name="accept" className="mt-1 h-5 w-5 shrink-0 accent-[#067a2e]" {...bad("accept")} />
                 <span>
-                  I am 18 or older, the details above are true, and I accept the{" "}
+                  The details above are true, and I accept the{" "}
                   {[
                     ["membership-rules", "Membership rules"],
                     ["code-of-conduct", "Code of conduct"],

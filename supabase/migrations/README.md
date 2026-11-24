@@ -13,6 +13,8 @@ Applied to the `graas-portal` Supabase project, in order:
 | `messaging_fee_not_announced` | `0007_…` (note) | "fee coming soon" messages, "payment open" when a fee is first set, plan names in messages |
 | `security_pin` | `0008_security_pin.sql` (note) | 6-digit PIN for changing payment and messaging keys |
 | `membership_terms`, `order_term_label` | `0009_membership_terms.sql` (note) | 1, 3, 5 year and lifetime (10 year) memberships with their own discounts |
+| `member_details_and_photos` | `0010_member_details_and_photos.sql` | gender, course, branch, year; parent or guardian for under-18s (no age bar); dropdown lists in `site_settings.profile_options`; private `member-photos` bucket |
+| `membership_type_change` | `0011_membership_type_change.sql` | change requests after payment, staff approval with a fee difference, `change` orders, messages |
 
 Rows marked "recorded in Supabase" or "(note)" were applied through the Supabase connector (24 and 25 Nov 2026). Their full SQL is stored in the project's
 migration history (`supabase_migrations.schema_migrations`). To copy them into this folder, run

@@ -1,5 +1,5 @@
 const QA = [
-  { q: "Who can become a member?", a: "Students aged 18 or older from diploma to PhD, working professionals, faculty, schools, colleges and companies. Students under 18 take part through a parent or their school." },
+  { q: "Who can become a member?", a: "Students of any age, from school and diploma to PhD, working professionals, faculty, schools, colleges and companies. Students under 18 join with a parent's or guardian's agreement." },
   { q: "What does membership cost?", a: "Each plan shows its fee on this page and again before you pay. If a plan says the fee is to be announced, you can still create your account and apply; you pay when the fee is published." },
   { q: "How do I pay?", a: "Online through Razorpay, by UPI, card or net banking. GRAAS staff and chapters never collect membership fees in cash." },
   { q: "What do I get the moment I am a member?", a: "A member number, a digital member ID with a QR code that anyone can verify, and a membership certificate. All three are in your account." },
@@ -11,7 +11,7 @@ const QA = [
 export default function Faq() {
   return (
     <section id="faq" className="section">
-      <div className="shell grid gap-10 lg:grid-cols-[0.8fr_1.4fr] lg:gap-16">
+      <div className="shell grid gap-7 lg:grid-cols-[0.8fr_1.4fr] lg:gap-10">
         <h2 className="h-section">Questions people ask before joining.</h2>
         <div className="border-t border-line">
           {QA.map((x) => (

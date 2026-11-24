@@ -37,7 +37,7 @@ export default async function GalleryStrip() {
           Open the gallery
         </Link>
       </div>
-      <div className="mt-12 grid gap-4">
+      <div className="mt-8 grid gap-4">
         <Row items={items.slice(0, half)} />
         <Row items={items.slice(half)} reverse />
       </div>

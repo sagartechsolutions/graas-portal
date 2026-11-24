@@ -75,7 +75,7 @@ export default function Benefits() {
             compete and how industry finds you.
           </p>
         </div>
-        <ul className="mt-12 grid gap-5 lg:grid-cols-12">
+        <ul className="mt-8 grid gap-5 lg:grid-cols-12">
           <Tile
             span="lg:col-span-7"
             title="Live lectures and courses"

@@ -17,12 +17,12 @@ export default async function PolicyArticle({ slug }: { slug: string }) {
       </div>
     );
   return (
-    <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-10">
       <article>
         <h1 className="h-section">{p.title}</h1>
         <p className="lede mt-4 !max-w-none">{p.summary}</p>
         <p className="mt-4 text-sm text-ink2">In effect from {longDate(p.effective_on)}</p>
-        <div className="mt-10">
+        <div className="mt-7">
           <PolicyBody body={p.body} />
         </div>
       </article>

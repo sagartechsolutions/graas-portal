@@ -18,7 +18,7 @@ async function FromParams({ params }: Pick<PageProps<"/policies/[slug]">, "param
 
 export default function Page({ params }: PageProps<"/policies/[slug]">) {
   return (
-    <section className="shell pb-20 pt-10 lg:pb-28 lg:pt-14">
+    <section className="shell pb-12 pt-7 lg:pb-16 lg:pt-10">
       <Suspense fallback={<div className="h-[60vh] animate-pulse rounded-[24px] bg-mist" />}>
         <FromParams params={params} />
       </Suspense>
