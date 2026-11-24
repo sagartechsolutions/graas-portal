@@ -294,7 +294,7 @@ export default function JoinApp({ plans }: { plans: Plan[] }) {
             {[
               ["Create your account", "Your application is saved at once."],
               plan.requires_approval ? ["GRAAS verifies it", "Usually within a few working days."] : null,
-              plan.price_inr === null ? ["Pay when the fee is announced", "We will message you. Nothing is charged today."] : Number(plan.price_inr) === 0 ? null : ["Pay online", "Securely through Razorpay: UPI, cards or net banking."],
+              plan.price_inr === null ? ["Pay when the fee is announced", "We will message you. Nothing is charged today."] : Number(plan.price_inr) === 0 ? null : ["Pay online", plan.duration_months === 12 ? "Choose 1 year or pay once for longer and save. Securely through Razorpay." : "Securely through Razorpay: UPI, cards or net banking."],
               ["Membership is active", "Member number, digital ID and certificate in your account."],
             ]
               .filter((x): x is string[] => x !== null)

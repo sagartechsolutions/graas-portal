@@ -1,0 +1,12 @@
+-- Applied as `membership_terms` and `order_term_label` (full SQL is in supabase_migrations.schema_migrations).
+-- Membership length chosen at payment. public.membership_terms (years, label, discount_percent, is_published,
+-- sort_order): staff with the finance role edit it in Admin, Plans and fees; anyone reads published rows.
+-- Seeded 1 year 0%, 3 years 15%, 5 years 25%, 10 years "Lifetime (10 years)" 40%.
+-- Fees on membership_plans stay per year. private.quote(plan, coupon, years) charges price x years, takes off the
+-- length discount, then any coupon, then GST. Longer lengths apply only to 12-month plans.
+-- public.quote_plan(code, coupon, years) and public.svc_new_order(user, coupon, can_charge, years) take the length,
+-- with 1 as the default so older callers keep working. Orders store term_years, term_label and term_discount_paise.
+-- private.settle_order activates for plan months x term_years through private.activate_membership(id, kind, months).
+-- my_account returns membership.terms (each with its quote). Payment messages name the length when it is not 1 year.
+-- Fees set on 25 Nov 2026 at Sagar's instruction: Student 500, Professional 1,500, Institution 5,000, Industry 7,500
+-- a year, no GST.

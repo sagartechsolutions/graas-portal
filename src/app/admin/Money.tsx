@@ -117,8 +117,8 @@ export function Payments({ role }: { role: string }) {
             className="btn btn-quiet !min-h-10 !py-2"
             onClick={() =>
               downloadCsv("graas-payments", [
-                ["Receipt", "Date", "Name", "Email", "Mobile", "Plan", "Kind", "Fee", "Discount", "GST", "Total", "Refunded", "Status", "Method", "Razorpay order", "Razorpay payment", "Coupon"],
-                ...shown.map((o) => [o.receipt_no, shortDate(o.paid_at ?? o.created_at), o.payer_name, o.payer_email, o.payer_phone, o.plan_name, o.kind, o.base_paise / 100, o.discount_paise / 100, o.gst_paise / 100, o.total_paise / 100, o.refunded_paise / 100, o.status, o.method, o.rzp_order_id, o.rzp_payment_id, o.coupon_code]),
+                ["Receipt", "Date", "Name", "Email", "Mobile", "Plan", "Length", "Kind", "Fee", "Length discount", "Coupon discount", "GST", "Total", "Refunded", "Status", "Method", "Razorpay order", "Razorpay payment", "Coupon"],
+                ...shown.map((o) => [o.receipt_no, shortDate(o.paid_at ?? o.created_at), o.payer_name, o.payer_email, o.payer_phone, o.plan_name, o.term_label ?? "1 year", o.kind, o.base_paise / 100, (o.term_discount_paise ?? 0) / 100, o.discount_paise / 100, o.gst_paise / 100, o.total_paise / 100, o.refunded_paise / 100, o.status, o.method, o.rzp_order_id, o.rzp_payment_id, o.coupon_code]),
               ])
             }
           >
@@ -132,7 +132,7 @@ export function Payments({ role }: { role: string }) {
                 <span>
                   <span className="font-semibold">{o.payer_name ?? "Deleted account"}</span>
                   <span className="block text-sm text-ink2">
-                    {o.plan_name} ({o.kind}), {shortDate(o.paid_at ?? o.created_at)}
+                    {o.plan_name}, {o.term_label ?? "1 year"} ({o.kind}), {shortDate(o.paid_at ?? o.created_at)}
                     {o.receipt_no ? `, ${o.receipt_no}` : ""}
                   </span>
                 </span>

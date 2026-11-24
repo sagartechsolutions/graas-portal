@@ -208,7 +208,9 @@ Deno.serve(async (req) => {
         }
       }
       const g = await gateway();
-      const o = await admin.rpc("svc_new_order", { p_user: user.id, p_coupon: b.coupon ? text(b.coupon, 20) : null, p_can_charge: ready(g) });
+      const years = Number(b.years ?? 1);
+      if (!Number.isInteger(years) || years < 1 || years > 10) return fail("Choose a membership length.");
+      const o = await admin.rpc("svc_new_order", { p_user: user.id, p_coupon: b.coupon ? text(b.coupon, 20) : null, p_can_charge: ready(g), p_years: years });
       if (o.error) return fail("Could not start the payment. Please try again.");
       if (!o.data?.ok || o.data.free) return out(o.data);
       const r = await rzp(g, "POST", "/orders", { amount: o.data.total_paise, currency: "INR", receipt: o.data.order_id, notes: { purpose: "GRAAS membership", plan: o.data.plan_name } });

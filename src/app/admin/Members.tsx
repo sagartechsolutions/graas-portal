@@ -46,7 +46,7 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
   useEffect(() => {
     sb()
       .from("orders")
-      .select("id,plan_name,kind,total_paise,refunded_paise,status,receipt_no,paid_at,created_at,needs_review")
+      .select("id,plan_name,term_label,kind,total_paise,refunded_paise,status,receipt_no,paid_at,created_at,needs_review")
       .eq("user_id", row.user_id)
       .order("created_at", { ascending: false })
       .then(({ data }) => setOrders(data ?? []));
@@ -207,7 +207,7 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
           {orders.map((o) => (
             <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-2.5 text-[0.95rem]">
               <span>
-                {o.plan_name} ({o.kind}), {shortDate(o.paid_at ?? o.created_at)}
+                {o.plan_name}, {o.term_label ?? "1 year"} ({o.kind}), {shortDate(o.paid_at ?? o.created_at)}
                 {o.receipt_no ? `, ${o.receipt_no}` : ""}
               </span>
               <span className="flex items-center gap-3">

@@ -11,8 +11,10 @@ Applied to the `graas-portal` Supabase project, in order:
 | `messaging` | `0005_messaging.sql` | message queue, one-time codes, verification flags, event triggers, daily reminders (pg_cron), instant sending (pg_net), message settings and broadcast |
 | `message_templates` and `messaging_channels` | `0006_message_templates.sql` | the wording of every email and WhatsApp message; which code channels work |
 | `messaging_fee_not_announced` | `0007_…` (note) | "fee coming soon" messages, "payment open" when a fee is first set, plan names in messages |
+| `security_pin` | `0008_security_pin.sql` (note) | 6-digit PIN for changing payment and messaging keys |
+| `membership_terms`, `order_term_label` | `0009_membership_terms.sql` (note) | 1, 3, 5 year and lifetime (10 year) memberships with their own discounts |
 
-The last two were applied through the Supabase connector on 24 Nov 2026. Their full SQL is stored in the project's
+Rows marked "recorded in Supabase" or "(note)" were applied through the Supabase connector (24 and 25 Nov 2026). Their full SQL is stored in the project's
 migration history (`supabase_migrations.schema_migrations`). To copy them into this folder, run
 `supabase migration fetch` with the Supabase CLI linked to the project.
 

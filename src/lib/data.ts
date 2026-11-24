@@ -29,6 +29,22 @@ export async function getPlans(): Promise<Plan[]> {
   }
 }
 
+export type Term = { years: number; label: string; discount_percent: number };
+
+/** Membership lengths staff have published (1 year, 3 years, lifetime and so on) with their discounts. */
+export async function getTerms(): Promise<Term[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("plans");
+  try {
+    const { data, error } = await publicClient().from("membership_terms").select("years,label,discount_percent").eq("is_published", true).order("sort_order");
+    if (error) throw error;
+    return (data ?? []).map((t) => ({ ...t, discount_percent: Number(t.discount_percent) })) as Term[];
+  } catch {
+    return [];
+  }
+}
+
 export type Graascon = { year: number; dates: string | null; venue: string | null; cfp_url: string | null };
 
 export async function getGraascon(): Promise<Graascon> {

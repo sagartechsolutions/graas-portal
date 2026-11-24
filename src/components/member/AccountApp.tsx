@@ -62,19 +62,32 @@ function Steps({ m, state }: { m: any; state: string }) {
 /* Fee, coupon and the Razorpay checkout. Used for a first payment and for renewal. */
 function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onChange: (msg?: string) => void }) {
   const m = a.membership;
+  const terms: { years: number; label: string; discount_percent: number; quote: any }[] = (m.terms ?? []).filter((t: any) => t.quote?.ok);
+  const [years, setYears] = useState<number>(1);
   const [quote, setQuote] = useState<any>(m.quote);
   const [coupon, setCoupon] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
-  async function applyCoupon() {
-    const { data } = await sb().rpc("quote_plan", { p_plan_code: m.plan.code, p_coupon: coupon });
+  async function requote(y: number, code: string) {
+    if (!code) {
+      const t = terms.find((x) => x.years === y);
+      if (t) return setQuote(t.quote);
+    }
+    const { data } = await sb().rpc("quote_plan", { p_plan_code: m.plan.code, p_coupon: code || null, p_years: y });
     if (data) setQuote(data);
+  }
+  async function chooseTerm(y: number) {
+    setYears(y);
+    await requote(y, quote?.coupon ?? "");
+  }
+  async function applyCoupon() {
+    await requote(years, coupon.trim());
   }
   async function pay() {
     setBusy(true);
     setMsg("");
-    const o = await portal("create_order", { coupon: quote?.coupon ?? "" });
+    const o = await portal("create_order", { coupon: quote?.coupon ?? "", years });
     if (!o.ok) {
       setMsg(o.error ?? "Could not start the payment.");
       if (o.need) document.getElementById("confirm-contact")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -91,7 +104,7 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
       amount: o.amount,
       currency: "INR",
       name: "GRAAS",
-      description: `${o.description} membership`,
+      description: String(o.description ?? "GRAAS membership"),
       prefill: o.prefill,
       theme: { color: "#000e21" },
       modal: { ondismiss: () => setBusy(false) },
@@ -109,30 +122,70 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
   if (quote?.fee_pending) return <Notice tone="warn">The fee for this membership has not been announced yet. Your application is saved; we will message you when payment opens, and you can pay here.</Notice>;
   if (!quote?.ok) return <Notice tone="bad">{quote?.error ?? "The fee could not be worked out."}</Notice>;
   const row = "flex items-baseline justify-between gap-4 py-2";
+  const showTerms = terms.length > 1 && quote.annual_paise > 0;
   return (
     <div className="grid gap-4">
+      {showTerms && (
+        <fieldset>
+          <legend className="text-[0.95rem] font-semibold">{renewal ? "Renew for" : "Choose how long"}</legend>
+          <p className="mt-0.5 text-sm text-ink2">Pay once for a longer membership and save.</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {terms.map((t) => {
+              const on = years === t.years;
+              const perYear = Math.round(t.quote.total_paise / t.years);
+              return (
+                <label
+                  key={t.years}
+                  className={`relative cursor-pointer rounded-2xl border-2 p-3.5 transition-colors sm:p-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-go-deep ${on ? "border-ink bg-white" : "border-line bg-white hover:border-slate5"}`}
+                >
+                  <input type="radio" name="term" className="sr-only" checked={on} onChange={() => chooseTerm(t.years)} />
+                  <span className="block font-semibold">{t.label}</span>
+                  <span className="readout mt-1 block text-lg font-semibold sm:text-xl">{inr(t.quote.total_paise)}</span>
+                  <span className="block text-sm text-ink2">{t.years > 1 ? `${inr(perYear)} a year` : "per year"}</span>
+                  {Number(t.discount_percent) > 0 && (
+                    <span className="mt-2 inline-flex rounded-full bg-go-soft px-2.5 py-0.5 text-xs font-semibold text-go-deep">Save {Number(t.discount_percent)}%</span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          {years === 10 && <p className="mt-2 text-sm text-ink2">Lifetime membership runs for 10 years from the day it starts.</p>}
+        </fieldset>
+      )}
       <dl className="rounded-2xl bg-mist px-5 py-3">
         <div className={row}>
           <dt>
-            {quote.plan_name} membership{renewal ? ", renewal" : ""}
+            {quote.plan_name} membership, {quote.term_label ?? "1 year"}
+            {renewal ? ", renewal" : ""}
+            {quote.term_years > 1 && (
+              <span className="block text-sm text-ink2">
+                {quote.term_years} × {inr(quote.annual_paise)}
+              </span>
+            )}
           </dt>
-          <dd className="readout">{inr(quote.base_paise)}</dd>
+          <dd className="readout whitespace-nowrap">{inr(quote.base_paise)}</dd>
         </div>
+        {quote.term_discount_paise > 0 && (
+          <div className={row}>
+            <dt>Discount for {quote.term_label} ({Number(quote.term_discount_percent)}%)</dt>
+            <dd className="readout whitespace-nowrap">− {inr(quote.term_discount_paise)}</dd>
+          </div>
+        )}
         {quote.discount_paise > 0 && (
           <div className={row}>
             <dt>Discount ({quote.coupon})</dt>
-            <dd className="readout">− {inr(quote.discount_paise)}</dd>
+            <dd className="readout whitespace-nowrap">− {inr(quote.discount_paise)}</dd>
           </div>
         )}
         {quote.gst_paise > 0 && (
           <div className={row}>
             <dt>GST at {Number(quote.gst_percent)}%</dt>
-            <dd className="readout">{inr(quote.gst_paise)}</dd>
+            <dd className="readout whitespace-nowrap">{inr(quote.gst_paise)}</dd>
           </div>
         )}
         <div className={`${row} border-t border-line text-lg font-semibold`}>
           <dt>To pay</dt>
-          <dd className="readout">{inr(quote.total_paise)}</dd>
+          <dd className="readout whitespace-nowrap">{inr(quote.total_paise)}</dd>
         </div>
       </dl>
       <div className="flex flex-wrap items-end gap-3">
@@ -257,10 +310,16 @@ function Receipt({ o, org }: { o: any; org: any }) {
       <dl className="py-5 text-[0.95rem]">
         <div className={row}>
           <dt>
-            {o.plan_name} membership ({o.kind === "renewal" ? "renewal" : "new"})
+            {o.plan_name} membership, {o.term_label ?? "1 year"} ({o.kind === "renewal" ? "renewal" : "new"})
           </dt>
           <dd className="readout">{inr(o.base_paise)}</dd>
         </div>
+        {o.term_discount_paise > 0 && (
+          <div className={row}>
+            <dt>Discount for {o.term_label ?? "1 year"}</dt>
+            <dd className="readout">− {inr(o.term_discount_paise)}</dd>
+          </div>
+        )}
         {o.discount_paise > 0 && (
           <div className={row}>
             <dt>Discount{o.coupon_code ? ` (${o.coupon_code})` : ""}</dt>
@@ -883,7 +942,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
                       <div>
                         <p className="font-semibold">
-                          {o.plan_name} membership{o.kind === "renewal" ? ", renewal" : ""}
+                          {o.plan_name} membership{o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}{o.kind === "renewal" ? ", renewal" : ""}
                         </p>
                         <p className="text-sm text-ink2">
                           {shortDate(o.paid_at ?? o.created_at)}

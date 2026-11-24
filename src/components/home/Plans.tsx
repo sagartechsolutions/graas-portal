@@ -1,4 +1,4 @@
-import { getPlans } from "@/lib/data";
+import { getPlans, getTerms, type Term } from "@/lib/data";
 import type { Plan } from "@/lib/site";
 import Link from "next/link";
 
@@ -7,9 +7,16 @@ const term = (m: number | null) => (m === null ? "one time" : m === 12 ? "per ye
 const TONE: Record<Plan["audience"], string> = { student: "#b7babf", professional: "#8e919a", institution: "#5a616b", industry: "#000e21" };
 const HEIGHT: Record<Plan["audience"], number> = { student: 14, professional: 20, institution: 26, industry: 32 };
 
+/** Same arithmetic as the database quote: full price for the years, less the term discount, in paise. */
+function termPrice(priceInr: number, t: Term) {
+  const full = Math.round(priceInr * 100) * t.years;
+  return (full - Math.round((full * t.discount_percent) / 100)) / 100;
+}
+
 /** Membership plans straight from the database. Fees are set by staff in admin; until then the card says so. */
 export default async function Plans({ heading = true }: { heading?: boolean }) {
-  const plans = await getPlans();
+  const [plans, terms] = await Promise.all([getPlans(), getTerms()]);
+  const longer = terms.filter((t) => t.years > 1);
   return (
     <section id="plans" className={heading ? "section" : "pb-20"}>
       <div className="shell">
@@ -40,6 +47,26 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
                   </>
                 )}
               </p>
+              {p.price_inr !== null && Number(p.price_inr) > 0 && p.duration_months === 12 && longer.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-semibold">Pay once and save</p>
+                  <table className="mt-1.5 w-full text-sm">
+                    <tbody>
+                      {longer.map((t) => (
+                        <tr key={t.years} className="border-b border-line/70 last:border-0">
+                          <th scope="row" className="py-1.5 pr-2 text-left font-normal text-ink2">
+                            {t.label}
+                          </th>
+                          <td className="readout py-1.5 text-right font-semibold">₹{inr(termPrice(Number(p.price_inr), t))}</td>
+                          <td className="w-[4.5rem] py-1.5 pl-2 text-right">
+                            {t.discount_percent > 0 && <span className="text-xs font-semibold text-go-deep">−{t.discount_percent}%</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <ul className="mt-5 grid gap-2.5 text-[0.95rem]">
                 {p.benefits.map((b) => (
                   <li key={b} className="flex gap-2.5">

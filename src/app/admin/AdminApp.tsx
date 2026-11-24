@@ -309,6 +309,109 @@ function PlanCard({ plan, session, onSaved }: { plan: PlanRow; session: Session;
   );
 }
 
+type TermRow = { years: number; label: string; discount_percent: number; is_published: boolean; sort_order: number };
+
+/* Membership lengths sold at payment, each with its own discount. One row per length; the fee per year comes from each plan. */
+function Terms({ session, plans }: { session: Session; plans: PlanRow[] }) {
+  const [rows, setRows] = useState<TermRow[]>([]);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | string>("idle");
+  const load = useCallback(async () => {
+    const { data, error } = await sb().from("membership_terms").select("*").order("sort_order");
+    if (error) setState(error.message);
+    setRows(((data ?? []) as TermRow[]).map((r) => ({ ...r, discount_percent: Number(r.discount_percent) })));
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const set = (years: number, patch: Partial<TermRow>) => {
+    setRows((rs) => rs.map((r) => (r.years === years ? { ...r, ...patch } : r)));
+    setState("idle");
+  };
+
+  async function save() {
+    if (rows.some((r) => !r.label.trim() || !Number.isFinite(r.discount_percent) || r.discount_percent < 0 || r.discount_percent > 90))
+      return setState("Each length needs a name, and a discount between 0 and 90%.");
+    if (!rows.some((r) => r.years === 1 && r.is_published)) return setState("Keep 1 year switched on, so renewals and new members always have a plain option.");
+    setState("saving");
+    for (const r of rows) {
+      const { error } = await sb()
+        .from("membership_terms")
+        .update({ label: r.label.trim(), discount_percent: r.discount_percent, is_published: r.is_published, updated_at: new Date().toISOString(), updated_by: session.user.id })
+        .eq("years", r.years);
+      if (error) return setState(error.message);
+    }
+    await refreshSite(session);
+    setState("saved");
+  }
+
+  const example = plans.find((p) => p.is_published && p.price_inr && p.duration_months === 12);
+  const price = (t: TermRow) => {
+    if (!example?.price_inr) return null;
+    const full = Math.round(Number(example.price_inr) * 100) * t.years;
+    return full - Math.round((full * t.discount_percent) / 100);
+  };
+  const money = (paise: number) => "₹" + new Intl.NumberFormat("en-IN").format(paise / 100);
+
+  return (
+    <section className="mt-10">
+      <h3 className="text-lg font-semibold">Membership length and discounts</h3>
+      <p className="mt-1 max-w-2xl text-ink2">
+        Members choose one of these when they pay. The fee above is per year; a longer length is charged once, less its discount. Applies to plans of 12 months.
+      </p>
+      <div className="plate mt-4 overflow-x-auto p-0">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead className="bg-mist text-left text-ink2">
+            <tr>
+              <th className="px-4 py-2.5 font-semibold">Length</th>
+              <th className="px-4 py-2.5 font-semibold">Name shown to members</th>
+              <th className="px-4 py-2.5 font-semibold">Discount %</th>
+              {example && <th className="px-4 py-2.5 font-semibold">{example.name} pays</th>}
+              <th className="px-4 py-2.5 font-semibold">Offered</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const pay = price(r);
+              return (
+                <tr key={r.years} className="border-t border-line">
+                  <td className="readout px-4 py-2.5">{r.years} yr</td>
+                  <td className="px-4 py-2">
+                    <input className="field !min-h-9 w-full" value={r.label} onChange={(e) => set(r.years, { label: e.target.value })} aria-label={`Name for ${r.years} years`} />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      className="field !min-h-9 w-24"
+                      inputMode="decimal"
+                      value={r.discount_percent}
+                      disabled={r.years === 1}
+                      onChange={(e) => set(r.years, { discount_percent: Number(e.target.value) })}
+                      aria-label={`Discount for ${r.years} years`}
+                    />
+                  </td>
+                  {example && <td className="readout px-4 py-2.5">{pay === null ? "" : money(pay)}</td>}
+                  <td className="px-4 py-2.5">
+                    <input type="checkbox" className="h-4 w-4 accent-[#067a2e]" checked={r.is_published} disabled={r.years === 1} onChange={(e) => set(r.years, { is_published: e.target.checked })} aria-label={`Offer ${r.years} years`} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-4 flex items-center gap-4">
+        <button type="button" className="btn btn-go !min-h-10 !py-2" onClick={save} disabled={state === "saving" || rows.length === 0}>
+          {state === "saving" ? "Saving…" : "Save lengths"}
+        </button>
+        <p className="text-sm" aria-live="polite">
+          {state === "saved" ? <span className="font-semibold text-ok">Saved. Members see these when they pay.</span> : state !== "idle" && state !== "saving" ? <span className="font-semibold text-[#8f1a11]">{state}</span> : null}
+        </p>
+      </div>
+      <p className="mt-2 text-xs text-ink2">Orders already paid keep the length and price they were sold at.</p>
+    </section>
+  );
+}
+
 function Plans({ session }: { session: Session }) {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [err, setErr] = useState("");
@@ -340,9 +443,10 @@ function Plans({ session }: { session: Session }) {
       {err && <p role="alert" className="mt-3 font-semibold text-[#8f1a11]">{err}</p>}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {plans.map((p) => (
-          <PlanCard key={p.id} plan={p} session={session} onSaved={() => {}} />
+          <PlanCard key={p.id} plan={p} session={session} onSaved={load} />
         ))}
       </div>
+      <Terms session={session} plans={plans} />
       <form onSubmit={add} className="plate-soft mt-8 flex flex-wrap items-end gap-3 p-5">
         <label className="grid gap-1 text-sm font-semibold">
           New plan name

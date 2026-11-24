@@ -26,12 +26,13 @@ export const POLICY_DEFAULTS: Policy[] = [
 
 ## 3. Fees and when membership starts
 - The fee for each plan is the one shown on the Membership page on the day you pay. Taxes, if any, are shown before payment.
+- Annual plans can be paid for 1 year, or paid once for a longer period at the discount shown before payment. "Lifetime" membership means 10 years from the day it becomes active.
 - Fees are paid online through Razorpay. GRAAS staff and chapters do not collect membership fees in cash.
 - Membership becomes active when the payment is confirmed. You then receive a member number, a digital member ID and a membership certificate.
 
 ## 4. Validity and renewal
-- A membership is valid for the period stated in the plan, counted from the day it becomes active.
-- Renewal opens 60 days before the end date. A renewal paid before the end date adds a full period to the existing end date.
+- A membership is valid for the period paid for, counted from the day it becomes active. The end date is shown on the member ID and certificate.
+- Renewal opens 60 days before the end date. A renewal paid before the end date adds the period paid for to the existing end date.
 - A membership that is not renewed lapses. The member number is kept and is used again if the person renews.
 
 ## 5. What a member receives
@@ -128,7 +129,7 @@ GRAAS is a place to learn and build. Everyone taking part, online or in person, 
 - Paid events and courses have their own cancellation terms, shown on the event or course page before you pay.
 
 ## Ending your membership
-- You may end your membership at any time. Ending it does not create a refund for the remaining period.`,
+- You may end your membership at any time. Ending it does not create a refund for the remaining period. This applies equally to memberships paid for several years at once.`,
   },
   {
     slug: "terms",
