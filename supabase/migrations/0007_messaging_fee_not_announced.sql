@@ -1,0 +1,8 @@
+-- Applied as `messaging_fee_not_announced`.
+-- While a plan has no fee, applicants hear "application saved / approved, fee coming soon" instead of "pay now".
+-- When the fee is set for the first time, everyone waiting on that plan gets the "ready for payment" message.
+-- Plan names in messages read "Student membership" rather than "Student".
+-- The full SQL is stored in the project's migration history (supabase_migrations.schema_migrations, name
+-- messaging_fee_not_announced). It adds templates application_saved and application_approved, replaces
+-- private.msg_membership, private.msg_order and private.run_daily, and adds private.msg_fee_announced with the
+-- trigger plans_fee_messages on public.membership_plans (after update of price_inr).
