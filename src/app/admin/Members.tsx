@@ -231,7 +231,7 @@ export function Members({ role }: { role: string }) {
   const [aud, setAud] = useState("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
-  const today = useMemo(istToday, []);
+  const today = useMemo(() => istToday(), []);
   const soon = useMemo(() => new Date(new Date(today).getTime() + 30 * 86400000).toISOString().slice(0, 10), [today]);
 
   const load = useCallback(async () => {

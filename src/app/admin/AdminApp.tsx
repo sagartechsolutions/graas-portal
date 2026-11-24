@@ -408,7 +408,7 @@ function Settings({ session }: { session: Session }) {
         <Field label="Registered office address" value={str(org, "address")} onChange={put(setOrg, "address")} />
         <Field label="Registration number (optional)" value={str(org, "registration_no")} onChange={put(setOrg, "registration_no")} />
         <Field label="GSTIN (only if GRAAS is registered for GST)" value={str(org, "gstin")} onChange={put(setOrg, "gstin")} />
-        <p className="text-xs text-ink2">These appear on members' receipts.</p>
+        <p className="text-xs text-ink2">These appear on the receipts members download.</p>
       </div>
       <div className="plate grid gap-3 p-5">
         <h3 className="text-xl font-semibold">Membership</h3>

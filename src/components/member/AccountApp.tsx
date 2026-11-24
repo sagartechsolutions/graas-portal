@@ -161,26 +161,28 @@ function IdCard({ a }: { a: Account }) {
   const m = a.membership, p = a.profile;
   const url = `${window.location.origin}/verify?id=${m.member_no}`;
   return (
-    <div className="print-area relative aspect-[1.586] w-full max-w-[460px] overflow-hidden rounded-[22px] bg-ink text-white shadow-[var(--shadow-lift)]">
+    <div className="print-area @container relative aspect-[1.586] w-full max-w-[460px] overflow-hidden rounded-[22px] bg-ink text-white shadow-[var(--shadow-lift)]">
       <div aria-hidden="true" className="absolute inset-0" style={{ background: "radial-gradient(420px circle at 80% 0%, rgba(255,255,255,0.16), transparent 60%)" }} />
       <LogoMark size={250} tone="light" className="absolute -bottom-10 -right-8 opacity-[0.06]" />
       <div className="relative flex h-full flex-col justify-between p-[6.5%]">
-        <div className="flex items-start justify-between gap-3">
-          <Logo tone="light" />
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium">
+        <div className="flex items-start justify-between gap-2">
+          <span className="origin-top-left @max-sm:scale-[0.72]">
+            <Logo tone="light" />
+          </span>
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium @max-sm:px-2 @max-sm:text-[0.62rem]">
             <span className="dot" /> {AUD[m.plan.audience]}
           </span>
         </div>
         <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
-            <p className="truncate text-xl font-semibold leading-tight tracking-tight sm:text-2xl">{p.full_name}</p>
-            <p className="truncate text-sm text-white/65">{m.organisation ?? p.organisation}</p>
-            <p className="readout mt-3 text-[0.7rem] text-white/50">Member number</p>
-            <p className="readout text-base">{m.member_no}</p>
-            <p className="mt-1 text-xs text-white/60">{m.ends_on ? `Valid until ${shortDate(m.ends_on)}` : "No end date"}</p>
+            <p className="truncate text-xl font-semibold leading-tight tracking-tight @max-sm:text-base sm:text-2xl">{p.full_name}</p>
+            <p className="truncate text-sm text-white/65 @max-sm:text-xs">{m.organisation ?? p.organisation}</p>
+            <p className="readout mt-3 text-[0.7rem] text-white/50 @max-sm:hidden">Member number</p>
+            <p className="readout whitespace-nowrap text-base @max-sm:mt-1.5 @max-sm:text-[0.8rem]">{m.member_no}</p>
+            <p className="mt-1 text-xs text-white/60 @max-sm:text-[0.65rem]">{m.ends_on ? `Valid until ${shortDate(m.ends_on)}` : "No end date"}</p>
           </div>
-          <div className="shrink-0 rounded-xl bg-white p-1.5">
-            <Qr value={url} size={84} />
+          <div className="shrink-0 rounded-xl bg-white p-1.5 @max-sm:rounded-lg @max-sm:p-1">
+            <Qr value={url} size={84} className="@max-sm:h-[58px] @max-sm:w-[58px]" />
           </div>
         </div>
       </div>
