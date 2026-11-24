@@ -9,13 +9,13 @@ import Logo from "@/components/site/Logo";
 import { browserClient, portal } from "@/lib/browser";
 import { INDIAN_STATES, STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
 import type { Plan } from "@/lib/site";
-import { EMPTY_OPTIONS, GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, initials, isIndividual, isMinor, removePhoto, uploadPhoto, usePhoto, type ProfileOptions } from "./Details";
+import { EMPTY_OPTIONS, GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, initials, isIndividual, isMinor, isSchoolCourse, removePhoto, uploadPhoto, usePhoto, type ProfileOptions } from "./Details";
 import { planFee } from "./JoinApp";
 import { Certificate, IdCards } from "./MemberDocs";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
-type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels; options?: ProfileOptions };
+type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels; options?: ProfileOptions; my_chapter?: any; chapter_member?: any };
 const sb = () => browserClient();
 const lbl = "grid gap-1.5 text-[0.95rem] font-medium";
 
@@ -30,13 +30,40 @@ function loadRazorpay(): Promise<boolean> {
   });
 }
 
+/** What a member still has to add before the certificate is issued. The certificate needs a complete profile and a photo. */
+export function missingForCertificate(a: { profile: any; membership: any; today?: string }) {
+  const p = a.profile ?? {}, m = a.membership;
+  const aud: string = m?.plan?.audience ?? p.kind ?? "";
+  const has = (v: unknown) => typeof v === "string" && v.trim() !== "";
+  const out: string[] = [];
+  if (!p.photo_updated_at) out.push(isIndividual(aud) ? "Your photo" : "Your logo");
+  if (!has(p.full_name)) out.push("Full name");
+  if (!has(p.phone)) out.push("Mobile number");
+  if (!has(p.city)) out.push("City");
+  if (!has(p.organisation)) out.push(aud === "student" ? "School or college" : "Organisation");
+  if (isIndividual(aud)) {
+    if (!has(p.gender)) out.push("Gender");
+    if (!p.dob) out.push("Date of birth");
+  }
+  if (aud === "student") {
+    if (!has(p.course)) out.push("Course");
+    else if (p.course === "Other" && !has(p.course_other)) out.push("Name of your course");
+    if (!has(p.study_year)) out.push(isSchoolCourse(p.course) ? "Class" : "Year of study");
+    if (p.branch === "Other" && !has(p.branch_other)) out.push("Name of your branch");
+  }
+  if (aud === "professional" && !has(p.designation)) out.push("Designation");
+  if (isIndividual(aud) && isMinor(p.dob, a.today) && (!has(p.guardian_name) || !has(p.guardian_phone))) out.push("Parent or guardian details");
+  return out;
+}
+
 function Notice({ tone = "info", children }: { tone?: "info" | "good" | "warn" | "bad"; children: React.ReactNode }) {
   const cls = { info: "bg-mist text-ink", good: "bg-go-soft text-go-deep", warn: "bg-[#fff4e5] text-[#8a4b00]", bad: "bg-[#fff1ef] text-[#8f1a11]" }[tone];
   return <p className={`rounded-xl px-4 py-3 text-[0.95rem] font-medium ${cls}`}>{children}</p>;
 }
 
 function Steps({ m, state }: { m: any; state: string }) {
-  const steps = ["Applied", ...(m.plan.requires_approval ? ["Verified"] : []), "Fee paid", "Active"];
+  const free = m.plan.code === "school-student" || Number(m.plan.price_inr) === 0;
+  const steps = free ? ["Added by the chapter", "Approved by GRAAS", "Active"] : ["Applied", ...(m.plan.requires_approval ? ["Verified"] : []), "Fee paid", "Active"];
   const done = state === "active" || state === "expired" || state === "suspended" ? steps.length : state === "pending_payment" ? steps.length - 2 : 1;
   return (
     <ol className="flex flex-wrap gap-x-2 gap-y-3">
@@ -317,7 +344,7 @@ function TypeFields({ audience, a }: { audience: string; a: Account }) {
 const formDetails = (form: HTMLFormElement) => {
   const f = new FormData(form);
   const v = (k: string) => String(f.get(k) ?? "").trim();
-  return { organisation: v("organisation"), designation: v("designation"), gender: v("gender"), course: v("course"), branch: v("branch"), study_year: v("study_year") };
+  return { organisation: v("organisation"), designation: v("designation"), gender: v("gender"), course: v("course"), course_other: v("course_other"), branch: v("branch"), branch_other: v("branch_other"), study_year: v("study_year") };
 };
 
 /** Before payment: the member changes type at once, giving the details the new type needs. */
@@ -552,8 +579,42 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
     else setErr(data?.error ?? "That did not work. Please try again.");
   }
 
+  const chapterCards = (
+    <>
+      {a.my_chapter && (
+        <div className="relative overflow-hidden rounded-[24px] bg-ink p-6 text-white sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-white/60">You coordinate</p>
+              <p className="text-xl font-semibold">{a.my_chapter.label}</p>
+              <p className="mt-1 text-sm text-white/70">
+                {a.my_chapter.code ? `Chapter number ${a.my_chapter.code}. ` : ""}
+                {{ draft: "Not sent to GRAAS yet.", submitted: "With GRAAS for review.", approved: "Approved.", rejected: "GRAAS has asked for a change.", suspended: "Suspended." }[a.my_chapter.status as string] ?? ""}
+              </p>
+            </div>
+            <Link href="/chapter" className="btn btn-light">
+              Open the chapter console
+            </Link>
+          </div>
+        </div>
+      )}
+      {a.chapter_member && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
+          <p>
+            <span className="text-sm text-ink2">Your chapter</span>
+            <span className="block font-semibold">{a.chapter_member.label}</span>
+          </p>
+          {a.chapter_member.code && <span className="readout rounded-md bg-mist px-2.5 py-1 text-sm">{a.chapter_member.code}</span>}
+        </div>
+      )}
+    </>
+  );
+
   if (!m || state === "rejected" || state === "cancelled")
     return (
+      <div className="grid gap-5">
+      {chapterCards}
+      {!(a.my_chapter && !m) ? (
       <div className="card grid gap-4 p-6 sm:p-8">
         <h2 className="h-card !text-2xl">{m ? (state === "rejected" ? "Your application was not approved" : "Your earlier application is closed") : "You do not have a membership yet"}</h2>
         {m?.decision_reason && <Notice tone="warn">Reason given: {m.decision_reason}</Notice>}
@@ -564,10 +625,35 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
           </Link>
         </p>
       </div>
+      ) : (
+        <div className="card grid gap-2 p-6 sm:p-8">
+          <h2 className="h-card !text-2xl">Your own membership</h2>
+          <p className="text-ink2">Leading a chapter does not need a membership. If you want your own member ID and certificate too, you can join as a professional.</p>
+          <p>
+            <Link href="/join?plan=professional-annual" className="link">
+              Join as a professional
+            </Link>
+          </p>
+        </div>
+      )}
+      </div>
     );
 
+  const missing = missingForCertificate(a);
   return (
     <div className="grid gap-5">
+      {chapterCards}
+      {state === "active" && missing.length > 0 && (
+        <div className="card flex flex-wrap items-center justify-between gap-4 border-[#f3d7a6] bg-[#fffaf0] p-5">
+          <p>
+            <span className="block font-semibold">Complete your profile to get your certificate</span>
+            <span className="text-sm text-ink2">Still needed: {missing.join(", ")}.</span>
+          </p>
+          <button type="button" className="btn btn-primary !min-h-11" onClick={() => window.dispatchEvent(new CustomEvent("graas-tab", { detail: "profile" }))}>
+            Complete my profile
+          </button>
+        </div>
+      )}
       <div className="card grid gap-6 p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -865,7 +951,8 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
     const f = Object.fromEntries(new FormData(e.currentTarget).entries());
     const phone = String(f.phone).replace(/\D/g, "").slice(-10);
     const guardian_phone = String(f.guardian_phone ?? "").replace(/\D/g, "").slice(-10);
-    const { data } = await sb().rpc("member_update_profile", { p: { ...f, phone, guardian_phone } });
+    const { data, error } = await sb().rpc("member_update_profile", { p: { ...f, phone, guardian_phone } });
+    if (error) return setMsg({ tone: "bad", text: "Could not save just now. Check your internet and try again." });
     if (data?.ok) {
       setMsg({ tone: "good", text: phone !== p.phone && p.phone_verified_at ? "Saved. Confirm your new number on WhatsApp from the Overview tab." : "Saved." });
       reload();
@@ -928,7 +1015,7 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             </select>
           </label>
           <label className={lbl}>
-            {ORG_LABEL[kind] ?? "Organisation"}
+            {a.membership?.plan?.code === "school-student" ? "School" : (ORG_LABEL[kind] ?? "Organisation")}
             <input name="organisation" className="field" defaultValue={p.organisation ?? ""} maxLength={120} />
           </label>
           {kind !== "student" && (
@@ -937,7 +1024,7 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
               <input name="designation" className="field" defaultValue={p.designation ?? ""} maxLength={120} placeholder={ROLE_HINT[kind]} />
             </label>
           )}
-          {isIndividual(kind) && <PersonFields audience={kind} options={a.options ?? EMPTY_OPTIONS} initial={p} lbl={lbl} />}
+          {isIndividual(kind) && <PersonFields audience={kind} options={a.options ?? EMPTY_OPTIONS} initial={p} lbl={lbl} school={a.membership?.plan?.code === "school-student"} />}
           {isIndividual(kind) && isMinor(p.dob, a.today) && <GuardianFields initial={p} lbl={lbl} />}
           <label className={`${lbl} sm:col-span-2`}>
             <span>
@@ -950,7 +1037,7 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
           <button className="btn btn-primary">Save details</button>
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         </div>
-        <p className="text-sm text-ink2">Your member ID and certificate always show the details saved here.</p>
+        <p className="text-sm text-ink2">Your member ID and certificate always show the details saved here. The certificate is issued once every detail and your photo are in.</p>
       </form>
       </div>
       <div className="grid content-start gap-5">
@@ -1044,7 +1131,81 @@ function Help({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
   );
 }
 
-export default function AccountApp({ plans }: { plans: Plan[] }) {
+/** First sign-in for a student a chapter added: choose a password and accept the rules. */
+function FirstPassword({ a, done }: { a: Account; done: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ field?: string; error: string } | null>(null);
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const p1 = String(f.get("password") ?? ""), p2 = String(f.get("password2") ?? "");
+    if (p1.length < 8) return setErr({ field: "password", error: "Use at least 8 characters." });
+    if (p1 !== p2) return setErr({ field: "password2", error: "The two passwords do not match." });
+    if (f.get("accept") !== "on") return setErr({ field: "accept", error: "Please accept the membership rules and policies to continue." });
+    setBusy(true);
+    const r = await portal("first_password", { password: p1, accept: true });
+    setBusy(false);
+    if (!r.ok) return setErr({ field: r.field, error: r.error ?? "Could not save the password." });
+    done();
+  }
+  const bad = (f: string) => (err?.field === f ? { "aria-invalid": true as const } : {});
+  return (
+    <section className="bg-mist">
+      <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
+        <div className="flex items-center gap-3">
+          <Logo />
+        </div>
+        <h1 className="h-section mt-6">Welcome, {String(a.profile.full_name ?? "").split(" ")[0] || "member"}.</h1>
+        <p className="lede mt-3">
+          {a.chapter_member ? `${a.chapter_member.label} has made you a GRAAS member.` : "Your GRAAS membership is ready."} Choose your own password to finish signing in.
+        </p>
+        {a.membership?.member_no && (
+          <p className="mt-4 inline-flex rounded-xl bg-white px-4 py-2.5 shadow-[var(--shadow-card)]">
+            <span className="text-sm text-ink2">Member number&nbsp;</span>
+            <span className="readout font-semibold">{a.membership.member_no}</span>
+          </p>
+        )}
+        <form onSubmit={save} className="card mt-7 grid gap-4 p-6 shadow-[var(--shadow-card)] sm:p-8" noValidate>
+          <label className={lbl}>
+            New password
+            <input name="password" type="password" className="field" autoComplete="new-password" minLength={8} maxLength={72} required {...bad("password")} />
+            <span className="text-sm font-normal text-ink2">At least 8 characters. Do not reuse the first password from the email.</span>
+          </label>
+          <label className={lbl}>
+            Type it again
+            <input name="password2" type="password" className="field" autoComplete="new-password" maxLength={72} required {...bad("password2")} />
+          </label>
+          <label className="flex items-start gap-3 text-[0.95rem]">
+            <input type="checkbox" name="accept" className="mt-1 h-5 w-5 shrink-0 accent-[#067a2e]" {...bad("accept")} />
+            <span>
+              I accept the{" "}
+              <Link href="/policies/membership-rules" target="_blank" className="font-semibold underline decoration-go decoration-2 underline-offset-4">
+                Membership rules
+              </Link>
+              ,{" "}
+              <Link href="/policies/code-of-conduct" target="_blank" className="font-semibold underline decoration-go decoration-2 underline-offset-4">
+                Code of conduct
+              </Link>{" "}
+              and{" "}
+              <Link href="/policies/privacy" target="_blank" className="font-semibold underline decoration-go decoration-2 underline-offset-4">
+                Privacy policy
+              </Link>
+              .{isMinor(a.profile.dob, a.today) ? " My parent or guardian agrees to my membership." : ""}
+            </span>
+          </label>
+          {err && <Notice tone="bad">{err.error}</Notice>}
+          <button className="btn btn-primary justify-self-start" disabled={busy}>
+            {busy ? "Saving…" : "Save and continue"}
+          </button>
+        </form>
+        <p className="mt-5 text-sm text-ink2">Next: add your photo and check your details. Your certificate is ready as soon as your profile is complete.</p>
+      </div>
+    </section>
+  );
+}
+
+export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
+  const plans = allPlans.filter((p) => p.self_join !== false);
   const router = useRouter();
   const params = useSearchParams();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -1053,6 +1214,12 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
   const [flash, setFlash] = useState(params.get("welcome") ? "Your account is ready and your application is saved." : "");
   const [org, setOrg] = useState<any>(null);
   const [receipt, setReceipt] = useState<any>(null);
+
+  useEffect(() => {
+    const go = (e: Event) => setTab(String((e as CustomEvent).detail ?? "overview"));
+    window.addEventListener("graas-tab", go);
+    return () => window.removeEventListener("graas-tab", go);
+  }, []);
 
   const load = useCallback(async () => {
     const { data } = await sb().rpc("my_account");
@@ -1085,8 +1252,14 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
       .then(({ data }) => setOrg(data?.value ?? null));
   }, [session, load, router]);
 
+  const reload2 = (msg?: string) => {
+    if (msg) setFlash(msg);
+    load();
+  };
   if (!session || !a) return <div className="shell py-16 text-ink2">Loading your account…</div>;
   if (!a.profile) return <div className="shell py-16 text-ink2">Your account could not be loaded. Please sign out and sign in again.</div>;
+
+  if (a.profile.must_change_password) return <FirstPassword a={a} done={() => reload2("Welcome to GRAAS. Your password is set.")} />;
 
   const m = a.membership;
   const state = effectiveStatus(m, a.today);
@@ -1168,7 +1341,27 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
               <p className="max-w-2xl text-ink2 print:hidden">Anyone can scan the code on the back, or type your member number at {typeof window !== "undefined" ? window.location.host : ""}/verify, to confirm that this membership is current. The card always shows your latest details and membership type.</p>
             </div>
           )}
-          {tab === "certificate" && hasId && (
+          {tab === "certificate" && hasId && (missingForCertificate(a).length > 0 ? (
+            <div className="card grid gap-5 p-6 sm:p-8">
+              <div>
+                <h2 className="h-card !text-2xl">Your certificate is almost ready</h2>
+                <p className="mt-1 text-ink2">GRAAS issues the membership certificate once your profile is complete, so it always carries your photo and the right details.</p>
+              </div>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {missingForCertificate(a).map((x) => (
+                  <li key={x} className="flex items-center gap-3 rounded-xl bg-mist px-4 py-3 font-medium">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate3" aria-hidden="true" />
+                    {x}
+                  </li>
+                ))}
+              </ul>
+              <p>
+                <button type="button" className="btn btn-primary" onClick={() => setTab("profile")}>
+                  Complete my profile
+                </button>
+              </p>
+            </div>
+          ) : (
             <div className="grid gap-5">
               <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
                 <h2 className="h-card !text-2xl">Membership certificate</h2>
@@ -1176,7 +1369,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
               </div>
               <Certificate a={a} org={org} />
             </div>
-          )}
+          ))}
           {tab === "payments" &&
             (receipt ? (
               <div className="grid gap-5">
@@ -1197,7 +1390,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
                       <div>
                         <p className="font-semibold">
-                          {o.purpose === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
+                          {o.chapter_id ? `Chapter seats: ${o.seats} ${o.seats === 1 ? "student" : "students"}, 1 year` : o.purpose === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
                         </p>
                         <p className="text-sm text-ink2">
                           {shortDate(o.paid_at ?? o.created_at)}

@@ -5,10 +5,10 @@ import { useInView } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 const STEPS = [
-  { title: "Choose a membership", text: "Student, professional, institution or industry. The fee for each is shown before you pay." },
-  { title: "Create your account", text: "Your name, mobile number, email and a password. It takes about two minutes." },
-  { title: "Pay online", text: "UPI, card or net banking through Razorpay. Institutions and companies are verified first." },
-  { title: "Get your ID and certificate", text: "A member number, a digital ID with a QR code and a certificate, in your account at once." },
+  { title: "Choose a membership", text: "Student, professional, institution or industry. School students join free through their school's chapter." },
+  { title: "Create your account", text: "Your name, mobile, email and a password, then a 6-digit code to confirm the email. About three minutes." },
+  { title: "Pay online", text: "UPI, card or net banking through Razorpay, for 1 year or longer and save. Institutions and companies are verified first." },
+  { title: "Get your ID and certificate", text: "A member number and a digital ID with a QR code at once; add your photo and the certificate is ready." },
 ];
 
 /** Four steps to membership. The highlight walks through them on its own and stops where the visitor points. */
@@ -28,8 +28,8 @@ export default function HowItWorks() {
       <div className="shell">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="max-w-3xl">
-            <h2 className="h-section">Four steps to membership.</h2>
-            <p className="lede mt-4">Everything happens on this website. No forms to post, no cash to hand over.</p>
+            <h2 className="h-section">Join in four easy steps.</h2>
+            <p className="lede mt-4">Everything happens on this website, on a phone or a laptop. No forms to post, no cash to hand over.</p>
           </div>
           <Link href="/join" className="btn btn-primary">
             Become a member

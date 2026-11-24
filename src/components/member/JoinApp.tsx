@@ -16,7 +16,9 @@ export function planFee(p: Plan) {
   return `${inr(Math.round(Number(p.price_inr) * 100))} ${term(p.duration_months)}${p.gst_percent > 0 ? ` + ${p.gst_percent}% GST` : ""}`;
 }
 
-export default function JoinApp({ plans, options }: { plans: Plan[]; options: ProfileOptions }) {
+export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; options: ProfileOptions }) {
+  // School Student membership comes only through a school's chapter, so it is not offered here.
+  const plans = allPlans.filter((p) => p.self_join !== false);
   const router = useRouter();
   const params = useSearchParams();
   const [code, setCode] = useState(() => (plans.some((p) => p.code === params.get("plan")) ? params.get("plan")! : (plans[0]?.code ?? "")));
@@ -48,7 +50,7 @@ export default function JoinApp({ plans, options }: { plans: Plan[]; options: Pr
     if (f.get("accept") !== "on") return setErr({ field: "accept", error: "Please accept the membership rules and policies to continue." });
     setBusy(true);
     const sb = browserClient();
-    const details = { gender: v("gender"), course: v("course"), branch: v("branch"), study_year: v("study_year"), designation: v("designation") };
+    const details = { gender: v("gender"), course: v("course"), course_other: v("course_other"), branch: v("branch"), branch_other: v("branch_other"), study_year: v("study_year"), designation: v("designation") };
     if (signedIn) {
       const { data } = await sb.rpc("member_reapply", { p_plan_code: code, p_org: v("organisation"), p_details: details });
       if (data?.ok) return router.push("/account?welcome=1");
@@ -141,6 +143,12 @@ export default function JoinApp({ plans, options }: { plans: Plan[]; options: Pr
           <form onSubmit={submit} className="mt-7 grid gap-8" noValidate>
             <fieldset>
               <legend className="h-card">1. Choose your membership</legend>
+              <p className="mt-2 text-[0.95rem] text-ink2">
+                In school (up to Class 12)? School students join free through their school&apos;s chapter.{" "}
+                <Link href="/chapters#school" className="font-semibold text-ink underline decoration-go decoration-2 underline-offset-4">
+                  How schools join
+                </Link>
+              </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {plans.map((p) => {
                   const on = p.code === code;

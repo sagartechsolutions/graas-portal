@@ -35,10 +35,15 @@ export default function Header() {
       document.body.style.overflow = "";
     };
   }, [open]);
+  // Close the phone menu whenever the page changes.
+  useEffect(() => {
+    Promise.resolve().then(() => setOpen(false));
+  }, [pathname]);
 
+  const here = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const item = (href: string) =>
-    `rounded-full px-3.5 py-2 text-[0.95rem] font-medium transition-colors hover:bg-mist ${pathname === href ? "text-ink" : "text-ink2 hover:text-ink"}`;
-  const inPrograms = PROGRAMS.some((p) => p.href === pathname);
+    `relative rounded-full px-3 py-2 text-[0.95rem] font-medium transition-colors hover:bg-mist 2xl:px-3.5 ${here(href) ? "text-ink" : "text-ink2 hover:text-ink"}`;
+  const inMore = PROGRAMS.some((p) => here(p.href));
 
   return (
     <>
@@ -48,22 +53,25 @@ export default function Header() {
         }`}
       >
         <div className="shell flex h-[4.5rem] items-center justify-between gap-4">
-          <Link href="/" aria-label="GRAAS home" className="shrink-0" onClick={() => setOpen(false)}>
+          <Link href="/" aria-label="GRAAS home" className="shrink-0">
             <Logo />
           </Link>
-          <nav aria-label="Main" className={`hidden items-center gap-0.5 ${staffArea ? "" : "lg:flex"}`}>
-            <Link href="/membership" className={item("/membership")} aria-current={pathname === "/membership" ? "page" : undefined}>
-              Membership
-            </Link>
+          <nav aria-label="Main" className={`hidden items-center gap-0.5 ${staffArea ? "" : "xl:flex"}`}>
+            {NAV.map((n) => (
+              <Link key={n.href} href={n.href} className={item(n.href)} aria-current={here(n.href) ? "page" : undefined}>
+                {n.label}
+                {here(n.href) && <span aria-hidden="true" className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-go" />}
+              </Link>
+            ))}
             <div className="group relative">
-              <button type="button" className={`${item("#")} inline-flex items-center gap-1.5 ${inPrograms ? "!text-ink" : ""}`} aria-haspopup="true">
-                Programs
+              <button type="button" className={`${item("#more")} inline-flex items-center gap-1.5 ${inMore ? "!text-ink" : ""}`} aria-haspopup="true">
+                More
                 <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" className="transition-transform group-hover:rotate-180 group-focus-within:rotate-180">
                   <path d="M1.5 3.5 5 7l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              <div className="invisible absolute left-1/2 top-full w-72 -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                <div className="card p-2 shadow-[var(--shadow-lift)]">
+              <div className="invisible absolute right-0 top-full w-80 translate-y-1 pt-3 opacity-0 transition-all duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="card grid gap-0.5 p-2 shadow-[var(--shadow-lift)]">
                   {PROGRAMS.map((p) => (
                     <Link key={p.href} href={p.href} className="flex flex-col rounded-xl px-3.5 py-2.5 transition-colors hover:bg-mist">
                       <span className="font-semibold">{p.label}</span>
@@ -73,11 +81,6 @@ export default function Header() {
                 </div>
               </div>
             </div>
-            {NAV.filter((n) => n.href !== "/membership").map((n) => (
-              <Link key={n.href} href={n.href} className={item(n.href)} aria-current={pathname === n.href ? "page" : undefined}>
-                {n.label}
-              </Link>
-            ))}
           </nav>
           <div className="flex items-center gap-2.5">
             {staffArea ? (
@@ -98,7 +101,7 @@ export default function Header() {
             )}
             <button
               type="button"
-              className={`h-11 w-11 items-center justify-center rounded-full border border-line bg-white ${staffArea ? "hidden" : "flex lg:hidden"}`}
+              className={`h-11 w-11 items-center justify-center rounded-full border border-line bg-white ${staffArea ? "hidden" : "flex xl:hidden"}`}
               aria-expanded={open}
               aria-controls="mobile-menu"
               aria-label={open ? "Close menu" : "Open menu"}
@@ -113,13 +116,22 @@ export default function Header() {
         <motion.div aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-go" style={{ scaleX: progress }} />
       </header>
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-[4.5rem] z-40 overflow-y-auto bg-white lg:hidden">
-          <nav aria-label="Mobile" className="shell flex flex-col py-6">
-            {[{ href: "/membership", label: "Membership" }, ...PROGRAMS, ...NAV.filter((n) => n.href !== "/membership"), { href: "/contact", label: "Contact" }].map((n) => (
-              <Link key={n.href} href={n.href} onClick={() => setOpen(false)} className="border-b border-line py-4 text-2xl font-semibold tracking-tight">
+        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-[4.5rem] z-40 overflow-y-auto bg-white xl:hidden">
+          <nav aria-label="Mobile" className="shell flex flex-col py-5">
+            {NAV.map((n) => (
+              <Link key={n.href} href={n.href} onClick={() => setOpen(false)} className={`flex items-center justify-between border-b border-line py-3.5 text-2xl font-semibold tracking-tight ${here(n.href) ? "text-ink" : "text-ink2"}`}>
                 {n.label}
+                {here(n.href) && <span className="dot" aria-hidden="true" />}
               </Link>
             ))}
+            <p className="mt-6 text-sm font-semibold text-slate7">More</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {PROGRAMS.map((p) => (
+                <Link key={p.href} href={p.href} onClick={() => setOpen(false)} className="rounded-xl bg-mist px-3.5 py-3 font-semibold">
+                  {p.label}
+                </Link>
+              ))}
+            </div>
             <Link href={signedIn ? "/account" : "/join"} onClick={() => setOpen(false)} className="btn btn-primary mt-7">
               {signedIn ? "My account" : "Become a member"}
             </Link>

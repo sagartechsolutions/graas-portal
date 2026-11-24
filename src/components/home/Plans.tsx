@@ -22,11 +22,11 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
       <div className="shell">
         {heading && (
           <div className="max-w-3xl">
-            <h2 className="h-section">A membership for where you are.</h2>
-            <p className="lede mt-4">Four ways to join. Each fee is shown here and again before you pay.</p>
+            <h2 className="h-section">Fees at a glance.</h2>
+            <p className="lede mt-4">Every fee is shown here and again before you pay. Pay once for longer and save.</p>
           </div>
         )}
-        <ul className={`grid gap-5 sm:grid-cols-2 xl:grid-cols-4 ${heading ? "mt-8" : ""}`}>
+        <ul className={`grid gap-5 sm:grid-cols-2 ${plans.length > 4 ? "xl:grid-cols-5" : "xl:grid-cols-4"} ${heading ? "mt-8" : ""}`}>
           {plans.map((p) => (
             <li key={p.code} className="card card-lift flex flex-col p-6 sm:p-7">
               <span aria-hidden="true" className="flex h-8 items-end">
@@ -35,7 +35,12 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
               <h3 className="h-card mt-4">{p.name}</h3>
               {p.tagline && <p className="mt-1.5 min-h-[2.8rem] text-[0.95rem] text-ink2">{p.tagline}</p>}
               <p className="mt-5 flex min-h-[3.4rem] flex-wrap items-baseline gap-x-2 border-y border-line py-3">
-                {p.price_inr === null ? (
+                {p.self_join === false && Number(p.price_inr) === 0 ? (
+                  <>
+                    <span className="text-3xl font-semibold tracking-tight text-go-deep">Free</span>
+                    <span className="text-sm text-ink2">through the school</span>
+                  </>
+                ) : p.price_inr === null ? (
                   <span className="text-[0.95rem] font-semibold text-ink2">Fee to be announced</span>
                 ) : (
                   <>
@@ -77,12 +82,19 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
                   </li>
                 ))}
               </ul>
-              {p.requires_approval && <p className="mt-4 text-sm text-ink2">Applications are verified before payment.</p>}
+              {p.requires_approval && p.self_join !== false && <p className="mt-4 text-sm text-ink2">Applications are verified before payment.</p>}
+              {p.self_join === false && p.how_to_join && <p className="mt-4 text-sm text-ink2">{p.how_to_join}</p>}
               {p.price_inr === null && <p className="mt-4 text-sm text-ink2">You can apply now and pay when the fee is announced.</p>}
               <div className="mt-auto pt-7">
-                <Link href={`/join?plan=${p.code}`} className="btn btn-primary w-full !min-h-12">
-                  Choose {p.name.toLowerCase()}
-                </Link>
+                {p.self_join === false ? (
+                  <Link href="/chapters#school" className="btn btn-ghost w-full !min-h-12">
+                    How schools join
+                  </Link>
+                ) : (
+                  <Link href={`/join?plan=${p.code}`} className="btn btn-primary w-full !min-h-12">
+                    Choose {p.name.toLowerCase()}
+                  </Link>
+                )}
               </div>
             </li>
           ))}

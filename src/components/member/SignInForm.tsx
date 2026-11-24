@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { browserClient } from "@/lib/browser";
 
 export default function SignInForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  // Only pages on this site: a "next" link from elsewhere is ignored.
+  const raw = params.get("next") ?? "";
+  const next = /^\/(?!\/)[\w\-/?=&]*$/.test(raw) ? raw : "/account";
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     browserClient()
       .auth.getSession()
-      .then(({ data }) => data.session && router.replace("/account"));
-  }, [router]);
+      .then(({ data }) => data.session && router.replace(next));
+  }, [router, next]);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,14 +31,14 @@ export default function SignInForm() {
       setBusy(false);
       return;
     }
-    router.push("/account");
+    router.push(next);
   }
 
   return (
     <section className="bg-mist">
       <div className="mx-auto w-full max-w-md px-5 py-10 sm:py-16">
         <h1 className="h-section">Sign in</h1>
-        <p className="mt-3 text-ink2">For GRAAS members and applicants.</p>
+        <p className="mt-3 text-ink2">For GRAAS members, applicants and chapter coordinators. Chapter students: use the login from your GRAAS email.</p>
         <form onSubmit={submit} className="card mt-8 grid gap-4 p-6 shadow-[var(--shadow-card)] sm:p-8">
           <label className="grid gap-1.5 text-[0.95rem] font-medium">
             Email
@@ -60,6 +64,10 @@ export default function SignInForm() {
           Not a member yet?{" "}
           <Link href="/join" className="link">
             Become a member
+          </Link>{" "}
+          or{" "}
+          <Link href="/chapters/apply" className="link">
+            start a chapter
           </Link>
         </p>
       </div>

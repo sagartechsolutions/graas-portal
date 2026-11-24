@@ -5,6 +5,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 import Footer from "@/components/site/Footer";
 import Header from "@/components/site/Header";
+import ScrollReset from "@/components/site/ScrollReset";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://graas.org.in"),
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "GRAAS",
     title: "GRAAS | Global Robotics And Automation Society",
-    description: "Become part of the robotics generation. Reserve your place before membership opens.",
+    description: "India's society for robotics and automation: students, schools, colleges, professionals and industry in one network.",
   },
 };
 
@@ -23,11 +24,12 @@ export const viewport: Viewport = { themeColor: "#ffffff", width: "device-width"
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body className="flex min-h-full flex-col">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
+        <ScrollReset />
         <Header />
         <main id="main" className="flex-1">
           {children}

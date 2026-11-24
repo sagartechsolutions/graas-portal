@@ -29,6 +29,9 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
   ];
   const todo: [number, string, string][] = [
     [d.pending_approval, "applications to verify", "members"],
+    [d.chapters_waiting ?? 0, "chapter applications to approve", "chapters"],
+    [d.roster_waiting ?? 0, "chapter students to approve", "chapters"],
+    [d.roster_failed ?? 0, "chapter logins that need attention", "chapters"],
     [d.refund_requests, "refunds waiting", "payments"],
     [d.needs_review, "payments to check", "payments"],
     [d.open_tickets, "help requests to answer", "helpdesk"],
@@ -45,6 +48,8 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
         <Stat label="Collected in total" value={inr(d.collected_paise)} note={`${d.paid_orders} payments`} />
         <Stat label="Accounts created" value={d.accounts} />
         <Stat label="Suspended" value={d.suspended} />
+        <Stat label="Chapters" value={d.chapters_active ?? 0} note={d.chapters_waiting ? `${d.chapters_waiting} waiting for approval` : undefined} tone="warn" />
+        <Stat label="School students" value={d.by_audience?.school ?? 0} note="Free, through school chapters" />
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="plate p-5 sm:p-6">

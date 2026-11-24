@@ -15,6 +15,10 @@ Applied to the `graas-portal` Supabase project, in order:
 | `membership_terms`, `order_term_label` | `0009_membership_terms.sql` (note) | 1, 3, 5 year and lifetime (10 year) memberships with their own discounts |
 | `member_details_and_photos` | `0010_member_details_and_photos.sql` | gender, course, branch, year; parent or guardian for under-18s (no age bar); dropdown lists in `site_settings.profile_options`; private `member-photos` bucket |
 | `membership_type_change` | `0011_membership_type_change.sql` | change requests after payment, staff approval with a fee difference, `change` orders, messages |
+| `fix_profile_save_status_list` | (note) | 25 Nov: profile save no longer names a status (`expired`) that does not exist, which had made every save fail |
+| `school_students_and_series` | `0012_school_students_and_series.sql` | typed text for "Other" course or branch; free School Student plan (only through a school chapter); member number series per plan (`GRAAS-STU-26-00001`, `SCH`, `PRO`, `INS`, `IND`) |
+| `chapters` | `0013_chapters.sql` | college chapters (branch-wise, 15 free seats, at least 10 students, principal's letter) and school chapters; private `chapter-docs` bucket; coordinator and staff functions; public chapter list |
+| `chapter_payments_logins_messages` | `0014_chapter_payments_logins_messages.sql` | chapter seat orders, automatic student logins (claimed and set up by `notify` and `portal`), quiet set-up, chapter emails, chapters in my_account, verify and the dashboard |
 
 Rows marked "recorded in Supabase" or "(note)" were applied through the Supabase connector (24 and 25 Nov 2026). Their full SQL is stored in the project's
 migration history (`supabase_migrations.schema_migrations`). To copy them into this folder, run
@@ -22,6 +26,7 @@ migration history (`supabase_migrations.schema_migrations`). To copy them into t
 
 Edge functions live in `supabase/functions`: `portal` (accounts, codes, password reset, Razorpay orders and refunds,
 staff account tools, message tests, Meta template sync), `razorpay-webhook`, and `notify` (sends queued messages; called
-by the database through pg_net and every two minutes by pg_cron, with a key kept in `private.app_secrets`). `portal` and
-`notify` import `_shared/messaging.ts` (Brevo email and Meta WhatsApp). All are deployed with JWT checking off because
+by the database through pg_net and every two minutes by pg_cron, with a key kept in `private.app_secrets`; it also sets up
+logins for approved chapter students). `portal` and `notify` import `_shared/messaging.ts` (Brevo email and Meta WhatsApp)
+and `_shared/provision.ts` (chapter student logins). All are deployed with JWT checking off because
 each does its own checks.

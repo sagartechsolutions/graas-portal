@@ -19,7 +19,7 @@ export async function getPlans(): Promise<Plan[]> {
   try {
     const { data, error } = await publicClient()
       .from("membership_plans")
-      .select("code,audience,name,tagline,duration_months,price_inr,gst_percent,benefits,requires_approval")
+      .select("code,audience,name,tagline,duration_months,price_inr,gst_percent,benefits,requires_approval,series,self_join,how_to_join")
       .eq("is_published", true)
       .order("sort_order");
     if (error) throw error;
@@ -42,6 +42,52 @@ export async function getTerms(): Promise<Term[]> {
     return (data ?? []).map((t) => ({ ...t, discount_percent: Number(t.discount_percent) })) as Term[];
   } catch {
     return [];
+  }
+}
+
+export type ChapterSettings = { open: boolean; free_seats: number; min_members: number; valid_months: number };
+
+/** Chapter rules set by staff: free seats, the smallest starting group, and how long a chapter runs before renewal. */
+export async function getChapterSettings(): Promise<ChapterSettings> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("settings");
+  const base: ChapterSettings = { open: true, free_seats: 15, min_members: 10, valid_months: 12 };
+  try {
+    const { data } = await publicClient().from("site_settings").select("value").eq("key", "chapters").maybeSingle();
+    return { ...base, ...((data?.value as Partial<ChapterSettings>) ?? {}) };
+  } catch {
+    return base;
+  }
+}
+
+export type PublicChapter = { code: string; kind: "college" | "school"; name: string; branch: string | null; city: string | null; state: string | null; since: string; members: number };
+
+/** Approved chapters, for the public list on the Chapters page. */
+export async function getPublicChapters(): Promise<PublicChapter[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("chapters");
+  try {
+    const { data } = await publicClient().rpc("public_chapters");
+    return (data ?? []) as PublicChapter[];
+  } catch {
+    return [];
+  }
+}
+
+export type OrgInfo = { name: string; email: string | null; phone: string | null; address: string | null };
+
+export async function getOrg(): Promise<OrgInfo> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("settings");
+  const base: OrgInfo = { name: "Global Robotics And Automation Society", email: "connect@graas.org.in", phone: null, address: null };
+  try {
+    const { data } = await publicClient().from("site_settings").select("value").eq("key", "org").maybeSingle();
+    return { ...base, ...((data?.value as Partial<OrgInfo>) ?? {}) };
+  } catch {
+    return base;
   }
 }
 

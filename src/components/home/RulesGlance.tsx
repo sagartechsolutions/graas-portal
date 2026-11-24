@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const RULES = [
-  { t: "Who can join", d: "Students of every level, professionals, institutions and companies. Students under 18 join with a parent's or guardian's agreement." },
-  { t: "When membership starts", d: "The moment your payment is confirmed. Institution and industry applications are verified by GRAAS first." },
+  { t: "Who can join", d: "College students, professionals, institutions and companies, online. School students join free through their school's chapter. Under-18s need a parent's or guardian's agreement." },
+  { t: "When membership starts", d: "The moment your payment is confirmed. Institutions, companies and chapter students are approved by GRAAS first." },
   { t: "How long it lasts", d: "For the period of your plan, counted from the day it starts. Renewal opens 60 days before the end, and you keep your member number." },
   { t: "How fees are paid", d: "Only online, through Razorpay on this website. Staff and chapters never collect membership fees in cash." },
   { t: "When fees are refunded", d: "In full for a duplicate charge, a declined application, or a payment that did not activate your membership. Not after a membership is active." },

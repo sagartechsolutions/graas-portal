@@ -3,18 +3,23 @@ export const ORG = {
   short: "GRAAS",
 };
 
-export const PROGRAMS = [
-  { href: "/learn", label: "Learn", note: "Live lectures and courses" },
-  { href: "/chapters", label: "Chapters", note: "A GRAAS team on your campus" },
-  { href: "/events", label: "Events", note: "Workshops and competitions" },
-  { href: "/industry", label: "Industry", note: "Jobs and real problems" },
+/** Main menu, in order. "More" holds the rest. */
+export const NAV = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/membership", label: "Membership" },
+  { href: "/chapters", label: "Chapters" },
+  { href: "/industries", label: "Industries" },
+  { href: "/contact", label: "Contact" },
 ];
 
-export const NAV = [
-  { href: "/membership", label: "Membership" },
-  { href: "/updates", label: "Updates" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/about", label: "About" },
+export const PROGRAMS = [
+  { href: "/learn", label: "Learn", note: "Live lectures and courses" },
+  { href: "/events", label: "Events", note: "Workshops and competitions" },
+  { href: "/graascon", label: "GRAASCON", note: "The yearly conference" },
+  { href: "/updates", label: "Updates", note: "News from the society" },
+  { href: "/gallery", label: "Gallery", note: "Robots, labs and people" },
+  { href: "/verify", label: "Verify a member", note: "Check a member ID or chapter" },
 ];
 
 export const TRACKS = [
@@ -53,6 +58,9 @@ export const INTERESTS = [
 export type Plan = {
   code: string;
   audience: "student" | "professional" | "institution" | "industry";
+  series?: string | null;
+  self_join?: boolean;
+  how_to_join?: string | null;
   name: string;
   tagline: string | null;
   duration_months: number | null;

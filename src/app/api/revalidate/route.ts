@@ -19,5 +19,6 @@ export async function POST(req: Request) {
   revalidateTag("posts", { expire: 0 });
   revalidateTag("gallery", { expire: 0 });
   revalidateTag("policies", { expire: 0 });
+  revalidateTag("chapters", { expire: 0 });
   return NextResponse.json({ ok: true });
 }

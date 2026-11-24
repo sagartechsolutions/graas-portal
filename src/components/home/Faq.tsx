@@ -1,18 +1,18 @@
 const QA = [
-  { q: "Who can become a member?", a: "Students of any age, from school and diploma to PhD, working professionals, faculty, schools, colleges and companies. Students under 18 join with a parent's or guardian's agreement." },
-  { q: "What does membership cost?", a: "Each plan shows its fee on this page and again before you pay. If a plan says the fee is to be announced, you can still create your account and apply; you pay when the fee is published." },
-  { q: "How do I pay?", a: "Online through Razorpay, by UPI, card or net banking. GRAAS staff and chapters never collect membership fees in cash." },
-  { q: "What do I get the moment I am a member?", a: "A member number, a digital member ID with a QR code that anyone can verify, and a membership certificate. All three are in your account." },
-  { q: "Can I get a refund?", a: "In full if you are charged twice, if GRAAS declines your application, or if a payment does not activate your membership. A fee is not refunded once the membership is active. The Refund and cancellation policy has the details." },
-  { q: "Can my college or school start a chapter?", a: "Yes. Join as an institution, or as a student or faculty member, and tell us through the Help section of your account. A chapter needs a group of interested students and a faculty coordinator." },
-  { q: "We are a company. How do we take part?", a: "Join as an industry member. GRAAS verifies the company first. Industry members will be able to post jobs, internships and automation problems, and demonstrate at GRAAS events." },
+  { q: "What is GRAAS?", a: "The Global Robotics And Automation Society: a membership society that connects school and college students, professionals, institutions and industry in robotics and automation, through learning, chapters, competitions and industry work." },
+  { q: "Who can become a member?", a: "College students from diploma to PhD, working professionals and faculty, colleges and universities, and companies. School students up to Class 12 join free through their school's GRAAS chapter." },
+  { q: "Is it free for school students?", a: "Yes. A teacher registers a GRAAS school chapter with a letter from the principal and adds the students. GRAAS approves each student, and every student gets a login, a member ID and a certificate, free." },
+  { q: "How does a college chapter work?", a: "A faculty member of a branch leads it, with at least 10 students of that branch and a letter from the principal. The first 15 student memberships are free. More students join at the Student fee, paid by the chapter in one payment or by each student." },
+  { q: "What do I get the moment I am a member?", a: "A member number, a digital member ID with a QR code that anyone can verify, and a membership certificate once your profile and photo are complete. All of it is in your account." },
+  { q: "How do I pay, and can I get a refund?", a: "Online through Razorpay, by UPI, card or net banking. Fees are never collected in cash. A fee is refunded in full for a duplicate charge, a declined application or a payment that did not activate your membership." },
+  { q: "We are a company. How do we take part?", a: "Join as an industry member. GRAAS verifies the company first. Industry members post jobs, internships and automation problems, give guest lectures and sponsor events." },
 ];
 
-export default function Faq() {
+export default function Faq({ title = "Questions people ask about GRAAS." }: { title?: string }) {
   return (
     <section id="faq" className="section">
       <div className="shell grid gap-7 lg:grid-cols-[0.8fr_1.4fr] lg:gap-10">
-        <h2 className="h-section">Questions people ask before joining.</h2>
+        <h2 className="h-section">{title}</h2>
         <div className="border-t border-line">
           {QA.map((x) => (
             <details key={x.q} className="faq group border-b border-line">

@@ -10,7 +10,7 @@ export type ProfileOptions = { genders: string[]; courses: Course[]; branches: s
 export const EMPTY_OPTIONS: ProfileOptions = { genders: [], courses: [], branches: [] };
 
 export const ORG_LABEL: Record<string, string> = {
-  student: "School or college",
+  student: "College or institute",
   professional: "Company or organisation",
   institution: "Name of the institution",
   industry: "Name of the company",
@@ -34,9 +34,14 @@ type Bad = (f: string) => Record<string, unknown>;
  * Gender for individuals; course, year and branch for students. The year list follows the course,
  * and the branch appears only for courses that have branches. Field names match the database.
  */
-export function PersonFields({ audience, options, initial = {}, bad = () => ({}), lbl }: { audience: string; options: ProfileOptions; initial?: Record<string, any>; bad?: Bad; lbl: string }) {
+export const isSchoolCourse = (name?: string | null) => typeof name === "string" && /^school/i.test(name);
+
+export function PersonFields({ audience, options, initial = {}, bad = () => ({}), lbl, school = false }: { audience: string; options: ProfileOptions; initial?: Record<string, any>; bad?: Bad; lbl: string; school?: boolean }) {
   const [course, setCourse] = useState<string>(initial.course ?? "");
-  const c = options.courses.find((x) => x.name === course);
+  const [branch, setBranch] = useState<string>(initial.branch ?? "");
+  // School classes are only for students their school adds; everyone else chooses a college course.
+  const courses = options.courses.filter((x) => (school ? isSchoolCourse(x.name) : !isSchoolCourse(x.name)));
+  const c = courses.find((x) => x.name === course);
   if (!isIndividual(audience)) return null;
   return (
     <>
@@ -53,32 +58,42 @@ export function PersonFields({ audience, options, initial = {}, bad = () => ({})
       </label>
       {audience === "student" && (
         <>
+          {school ? (
+            <input type="hidden" name="course" value={courses[0]?.name ?? ""} />
+          ) : (
+            <label className={lbl}>
+              Course
+              <select name="course" className="field" value={c ? course : ""} onChange={(e) => setCourse(e.target.value)} required {...bad("course")}>
+                <option value="" disabled>
+                  Choose your course
+                </option>
+                {courses.map((x) => (
+                  <option key={x.name}>{x.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          {!school && course === "Other" && (
+            <label className={lbl}>
+              Name of your course
+              <input name="course_other" className="field" defaultValue={initial.course_other ?? ""} maxLength={80} placeholder="For example B.Voc Mechatronics" required {...bad("course_other")} />
+            </label>
+          )}
           <label className={lbl}>
-            Course
-            <select name="course" className="field" value={c ? course : ""} onChange={(e) => setCourse(e.target.value)} required {...bad("course")}>
+            {school ? "Class" : "Year of study"}
+            <select key={`y-${course}`} name="study_year" className="field" defaultValue={(school ? courses[0] : c)?.years.includes(initial.study_year) ? initial.study_year : ""} required disabled={!(school ? courses[0] : c)} {...bad("study_year")}>
               <option value="" disabled>
-                Choose your course
+                {school ? "Choose the class" : c ? "Choose your year" : "Choose the course first"}
               </option>
-              {options.courses.map((x) => (
-                <option key={x.name}>{x.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className={lbl}>
-            Year of study
-            <select key={`y-${course}`} name="study_year" className="field" defaultValue={c?.years.includes(initial.study_year) ? initial.study_year : ""} required disabled={!c} {...bad("study_year")}>
-              <option value="" disabled>
-                {c ? "Choose your year" : "Choose the course first"}
-              </option>
-              {(c?.years ?? []).map((y) => (
+              {((school ? courses[0] : c)?.years ?? []).map((y) => (
                 <option key={y}>{y}</option>
               ))}
             </select>
           </label>
-          {c?.branches && (
+          {!school && c?.branches && (
             <label className={lbl}>
               Branch
-              <select key={`b-${course}`} name="branch" className="field" defaultValue={options.branches.includes(initial.branch) ? initial.branch : ""} required {...bad("branch")}>
+              <select key={`b-${course}`} name="branch" className="field" value={options.branches.includes(branch) ? branch : ""} onChange={(e) => setBranch(e.target.value)} required {...bad("branch")}>
                 <option value="" disabled>
                   Choose your branch
                 </option>
@@ -86,6 +101,12 @@ export function PersonFields({ audience, options, initial = {}, bad = () => ({})
                   <option key={b}>{b}</option>
                 ))}
               </select>
+            </label>
+          )}
+          {!school && c?.branches && branch === "Other" && (
+            <label className={lbl}>
+              Name of your branch
+              <input name="branch_other" className="field" defaultValue={initial.branch_other ?? ""} maxLength={80} placeholder="For example Mining engineering" required autoFocus={!initial.branch_other} {...bad("branch_other")} />
             </label>
           )}
         </>
@@ -127,10 +148,15 @@ export function describe(p: any, audience: string): { label: string; value: stri
   const has = (v: unknown) => typeof v === "string" && v.trim() !== "";
   const rows: { label: string; value: string }[] = [];
   if (audience === "student") {
-    if (has(p.organisation)) rows.push({ label: "College", value: p.organisation });
-    if (has(p.course)) rows.push({ label: "Course", value: p.course + (has(p.study_year) ? `, ${p.study_year}` : "") });
+    const school = typeof p.course === "string" && /^school/i.test(p.course);
+    const course = p.course === "Other" && has(p.course_other) ? p.course_other : p.course;
+    const branch = p.branch === "Other" && has(p.branch_other) ? p.branch_other : p.branch;
+    if (has(p.organisation)) rows.push({ label: school ? "School" : "College", value: p.organisation });
+    if (school) {
+      if (has(p.study_year)) rows.push({ label: "Class", value: p.study_year });
+    } else if (has(course)) rows.push({ label: "Course", value: course + (has(p.study_year) ? `, ${p.study_year}` : "") });
     else if (has(p.study_year)) rows.push({ label: "Year", value: p.study_year });
-    if (has(p.branch)) rows.push({ label: "Branch", value: p.branch });
+    if (has(branch)) rows.push({ label: "Branch", value: branch });
   } else if (audience === "professional") {
     if (has(p.designation)) rows.push({ label: "Role", value: p.designation });
     if (has(p.organisation)) rows.push({ label: "Organisation", value: p.organisation });

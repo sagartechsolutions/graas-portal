@@ -11,6 +11,13 @@ export const PHOTOS = {
   chip: { src: "/photos/chip", alt: "Tweezers placing a microchip on a circuit board", ratio: 1800 / 1352 },
   engineer: { src: "/photos/engineer", alt: "An engineer programming a machine from a laptop", ratio: 1.5 },
   rovers: { src: "/photos/rovers", alt: "Two small wheeled robots built from kits", ratio: 1.5 },
+  chess: { src: "/photos/chess", alt: "A robot arm playing chess", ratio: 1800 / 1350 },
+  printers: { src: "/photos/printers", alt: "3D printers producing parts", ratio: 1800 / 1199 },
+  arduino: { src: "/photos/arduino", alt: "A microcontroller board, where most projects begin", ratio: 1800 / 1013 },
+  panel: { src: "/photos/panel", alt: "A touchscreen control panel on a production machine", ratio: 1800 / 1201 },
+  drone: { src: "/photos/drone", alt: "A quadcopter in flight", ratio: 1.5 },
+  prototype: { src: "/photos/prototype", alt: "A robot prototype on show", ratio: 1800 / 2700 },
+  hand: { src: "/photos/hand", alt: "Close-up of a robot hand", ratio: 1800 / 1296 },
 } as const;
 
 export type PhotoKey = keyof typeof PHOTOS;

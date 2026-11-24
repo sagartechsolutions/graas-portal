@@ -232,7 +232,7 @@ const SAMPLES: Record<string, string> = {
   name: "Asha",
   plan: "Student Membership",
   amount: "₹590",
-  member_no: "GRAAS-26S-00001",
+  member_no: "GRAAS-STU-26-00001",
   valid_till: "31 Mar 2027",
   receipt_no: "GRAAS/2026-27/00001",
   topic: "membership application",

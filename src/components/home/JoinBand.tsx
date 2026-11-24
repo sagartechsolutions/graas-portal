@@ -14,8 +14,11 @@ export default function JoinBand({ title = "Become a GRAAS member.", text = "Cre
             <Link href="/join" className="btn btn-light">
               Become a member
             </Link>
-            <Link href="/signin" className="btn border-white/25 bg-transparent text-white hover:border-white">
-              Sign in
+            <Link href="/membership" className="btn border-white/25 bg-transparent text-white hover:border-white">
+              Membership benefits
+            </Link>
+            <Link href="/chapters" className="btn border-white/25 bg-transparent text-white hover:border-white">
+              Start a chapter
             </Link>
             <Link href="/contact" className="btn border-transparent bg-transparent text-white/80 hover:text-white">
               Ask a question

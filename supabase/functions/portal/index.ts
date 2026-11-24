@@ -15,6 +15,7 @@ import {
   type Messaging,
   type Sent,
 } from "../_shared/messaging.ts";
+import { firstPassword, loginVars, provisionRows, sendLogin } from "../_shared/provision.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -144,6 +145,92 @@ Deno.serve(async (req) => {
   const ipHash = () => sha((req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() + "|graas");
 
   switch (b?.action) {
+    case "chapter_signup": {
+      // A faculty member or teacher who wants to start a chapter. No membership is needed to lead one.
+      if (b.website_hp) return fail("Could not create the account. Please try again.");
+      const d = {
+        full_name: text(b.full_name, 80),
+        email: text(b.email, 160).toLowerCase(),
+        phone: mobile(b.phone),
+        designation: text(b.designation, 120),
+        organisation: text(b.organisation, 120),
+        city: text(b.city, 80),
+        accept: b.accept === true,
+      };
+      const password = String(b.password ?? "");
+      if (password.length < 8 || password.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
+      const ip = await ipHash();
+      const chk = await admin.rpc("svc_head_check", { p_data: d, p_ip_hash: ip });
+      if (chk.error) return fail("Could not check the details. Please try again.");
+      if (!chk.data?.ok) return out(chk.data);
+      const made = await admin.auth.admin.createUser({
+        email: d.email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: d.full_name },
+        app_metadata: { via: "chapter_head" },
+      });
+      const id = made.data?.user?.id;
+      if (made.error || !id) {
+        const dup = /already|registered|exists/i.test(made.error?.message ?? "");
+        return fail(dup ? "An account with this email already exists. Sign in, then open the chapter page." : "Could not create the account. Please try again.", { field: "email" });
+      }
+      const leaked = (await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data;
+      const done = leaked ? null : await admin.rpc("svc_head_signup", { p_user: id, p_data: d, p_ip_hash: ip });
+      if (!done || done.error || !done.data?.ok) {
+        await admin.auth.admin.deleteUser(id);
+        return fail("Could not create the account. Please try again.");
+      }
+      const m = await loadMessaging(admin);
+      if (!emailReady(m)) return out({ ok: true, verify: null });
+      const sent = await sendCode(m, { purpose: "verify_email", channel: "email", target: d.email, user: id, ip, event: "code_verify_email", name: firstName(d.full_name) });
+      return out({ ok: true, verify: "email", sent: sent.ok, sent_to: d.email, minutes: sent.minutes ?? 10 });
+    }
+
+    case "chapter_provision": {
+      // Sets up logins for students who are ready, straight after an approval or payment, instead of waiting for the timer.
+      if (!user) return fail("Please sign in again.");
+      const chapter = String(b.chapter_id ?? "");
+      const c = (await admin.from("chapters").select("id,head_user").eq("id", chapter).maybeSingle()).data;
+      if (!c) return fail("Chapter not found.");
+      if (c.head_user !== user.id && !is("chapter_manager", "membership_desk")) return fail("Only the chapter coordinator or GRAAS staff can do this.");
+      const logins = await provisionRows(admin, await loadMessaging(admin), { chapter: c.id, deadline: Date.now() + 25_000 });
+      const left = (await admin.from("chapter_members").select("id", { count: "exact", head: true }).eq("chapter_id", c.id).in("status", ["ready", "provisioning"])).count ?? 0;
+      return out({ ok: true, ...logins, left });
+    }
+
+    case "chapter_resend": {
+      // A new first password for a student who has not signed in yet (lost email, typo in the inbox, and so on).
+      if (!user) return fail("Please sign in again.");
+      const info = (await admin.rpc("svc_roster_resend_info", { p_row: String(b.row_id ?? ""), p_actor: user.id })).data;
+      if (!info?.ok) return out(info ?? { ok: false, error: "Could not find this student." });
+      const m = await loadMessaging(admin);
+      if (!emailReady(m)) return fail("Email sending is switched off in Admin, so the login cannot be sent.");
+      const password = firstPassword();
+      const u = await admin.auth.admin.updateUserById(info.user_id, { password });
+      if (u.error) return fail("Could not reset the first password. Please try again.");
+      const vars = loginVars({ full_name: info.full_name, email: info.email, member_no: info.member_no, plan: info.plan, chapter: info.chapter, pay: info.pay, amount: info.amount }, password);
+      const sent = await sendLogin(admin, m, info.user_id, info.email, vars);
+      await admin.rpc("svc_roster_sent", { p_row: String(b.row_id), p_ok: sent.ok, p_error: sent.ok ? null : sent.error ?? "Not sent." });
+      await audit("chapter_login_resent", "chapter_members", String(b.row_id), { sent: sent.ok });
+      return sent.ok ? out({ ok: true, sent_to: maskEmail(info.email) }) : fail(sent.error ?? "The email could not be sent. Try again in a few minutes.");
+    }
+
+    case "first_password": {
+      // The student replaces the first password from their chapter login email, and accepts the rules.
+      if (!user) return fail("Please sign in again.");
+      const p = await profileOf(user.id);
+      if (!p?.must_change_password) return fail("Your password is already set. Use Change password in your profile.");
+      const pw = String(b.password ?? "");
+      if (pw.length < 8 || pw.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
+      if (b.accept !== true) return fail("Please accept the membership rules and policies to continue.", { field: "accept" });
+      const u = await admin.auth.admin.updateUserById(user.id, { password: pw });
+      if (u.error) return fail(/weak|short|pwned|leak/i.test(u.error.message ?? "") ? "Choose a stronger password." : "Could not save the password. Please try again.", { field: "password" });
+      await admin.rpc("svc_first_password_done", { p_user: user.id });
+      await audit("first_password_set", "profiles", user.id);
+      return out({ ok: true });
+    }
+
     case "health":
       return out({ ok: true, service_key: SERVICE.length > 0 });
 
@@ -163,7 +250,9 @@ Deno.serve(async (req) => {
         ref: text(b.ref, 12),
         gender: text(b.gender, 40),
         course: text(b.course, 80),
+        course_other: text(b.course_other, 80),
         branch: text(b.branch, 80),
+        branch_other: text(b.branch_other, 80),
         study_year: text(b.study_year, 40),
         guardian_name: text(b.guardian_name, 80),
         guardian_phone: String(b.guardian_phone ?? "").replace(/\D/g, "").slice(-10),
@@ -219,6 +308,10 @@ Deno.serve(async (req) => {
       if (b.purpose === "change") {
         // Fee difference for a membership type change that staff have approved.
         o = await admin.rpc("svc_new_change_order", { p_user: user.id, p_can_charge: ready(g) });
+      } else if (b.purpose === "chapter") {
+        // A chapter coordinator paying in one go for students beyond the free seats.
+        const ids = Array.isArray(b.ids) ? b.ids.map(String).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 500) : [];
+        o = await admin.rpc("svc_new_chapter_order", { p_user: user.id, p_ids: ids, p_can_charge: ready(g) });
       } else {
         const years = Number(b.years ?? 1);
         if (!Number.isInteger(years) || years < 1 || years > 10) return fail("Choose a membership length.");
@@ -226,7 +319,12 @@ Deno.serve(async (req) => {
       }
       if (o.error) return fail("Could not start the payment. Please try again.");
       if (!o.data?.ok || o.data.free) return out(o.data);
-      const r = await rzp(g, "POST", "/orders", { amount: o.data.total_paise, currency: "INR", receipt: o.data.order_id, notes: { purpose: "GRAAS membership", plan: o.data.plan_name } });
+      const r = await rzp(g, "POST", "/orders", {
+        amount: o.data.total_paise,
+        currency: "INR",
+        receipt: o.data.order_id,
+        notes: { purpose: o.data.chapter_id ? "GRAAS chapter seats" : "GRAAS membership", plan: o.data.plan_name },
+      });
       if (!r.ok || !r.j?.id) {
         await admin.rpc("svc_attach_rzp", { p_order: o.data.order_id, p_rzp_order: null, p_error: rzpError(r) });
         return fail("The payment could not be started. Please try again in a minute.");
@@ -240,7 +338,13 @@ Deno.serve(async (req) => {
       const g = await gateway();
       const expected = await hmac(g.key_secret ?? "", `${b.rzp_order_id}|${b.rzp_payment_id}`);
       if (!g.key_secret || !same(expected, String(b.signature ?? ""))) return fail("The payment could not be confirmed here. If money was taken, it is matched automatically within a few minutes.");
-      return (await settle(g, String(b.rzp_order_id))) ? out({ ok: true }) : fail("The payment is still being confirmed by the bank. Check again in a few minutes.");
+      if (!(await settle(g, String(b.rzp_order_id)))) return fail("The payment is still being confirmed by the bank. Check again in a few minutes.");
+      const paid = (await admin.from("orders").select("chapter_id").eq("rzp_order_id", String(b.rzp_order_id)).maybeSingle()).data;
+      if (paid?.chapter_id) {
+        const logins = await provisionRows(admin, await loadMessaging(admin), { chapter: paid.chapter_id, deadline: Date.now() + 20_000 });
+        return out({ ok: true, logins });
+      }
+      return out({ ok: true });
     }
 
     case "recheck": {

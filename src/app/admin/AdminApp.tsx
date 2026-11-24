@@ -7,6 +7,7 @@ import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
 import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
 import { Changes } from "./Changes";
+import { Chapters } from "./Chapters";
 import { Members } from "./Members";
 import { ProfileOptionsEditor } from "./Options";
 import { Broadcast, Messages } from "./Messages";
@@ -550,7 +551,7 @@ function Settings({ session }: { session: Session }) {
 
 const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Overview", items: [["dashboard", "Dashboard"]] },
-  { title: "Membership", items: [["members", "Members"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
+  { title: "Membership", items: [["members", "Members"], ["chapters", "Chapters"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
   { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
   { title: "Messages", items: [["messages", "Email and WhatsApp"], ["broadcast", "Send an update"]] },
@@ -602,6 +603,7 @@ export default function AdminApp() {
     dashboard: true,
     members: true,
     changes: is("membership_desk", "finance"),
+    chapters: is("chapter_manager", "membership_desk"),
     payments: is("finance", "membership_desk", "support"),
     plans: is("finance"),
     coupons: true,
@@ -676,6 +678,7 @@ export default function AdminApp() {
           {current === "dashboard" && <Dashboard go={setTab} />}
           {current === "members" && <Members role={role} />}
           {current === "changes" && <Changes role={role} />}
+          {current === "chapters" && <Chapters />}
           {current === "payments" && <Payments role={role} />}
           {current === "plans" && <Plans session={session} />}
           {current === "coupons" && <Coupons role={role} session={session} />}

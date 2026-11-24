@@ -4,9 +4,10 @@ import HeroSlides from "./HeroSlides";
 import MemberCard from "./MemberCard";
 
 const OPEN_TO = [
-  { label: "Students", note: "Diploma to PhD", h: 10, c: "#b7babf" },
+  { label: "Schools", note: "Class 1 to 12, free", h: 7, c: "#d4d6da" },
+  { label: "Students", note: "Diploma to PhD", h: 11, c: "#b7babf" },
   { label: "Professionals", note: "Engineers and faculty", h: 15, c: "#8e919a" },
-  { label: "Institutions", note: "Schools and colleges", h: 20, c: "#5a616b" },
+  { label: "Institutions", note: "Colleges and universities", h: 20, c: "#5a616b" },
   { label: "Industry", note: "Manufacturers", h: 25, c: "#000e21" },
 ];
 
@@ -28,23 +29,23 @@ export default function Hero() {
           <p className="chip">
             <span className="dot dot-live" />
             <span>
-              Membership is open<span className="hidden sm:inline">. Join online today</span>
+              Global Robotics And Automation Society<span className="hidden sm:inline">, India</span>
             </span>
           </p>
-          <h1 className="h-display mt-6">Become part of the robotics generation.</h1>
+          <h1 className="h-display mt-6">One society for everyone who builds robots and automates.</h1>
           <p className="lede mt-6">
-            GRAAS membership connects students, professionals, colleges and industry through live learning, campus
-            chapters, competitions and real industrial problems.
+            GRAAS brings school students, college students, professionals, institutions and industry into one network, to learn robotics and
+            automation from people who do it, build real machines together, compete, and meet the companies that hire.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/join" className="btn btn-primary">
-              Become a member
+            <Link href="/membership" className="btn btn-primary">
+              See membership benefits
             </Link>
-            <Link href="/#benefits" className="btn btn-ghost">
-              See member benefits
+            <Link href="/chapters" className="btn btn-ghost">
+              Start a chapter
             </Link>
           </div>
-          <dl className="mt-8 grid max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
+          <dl className="mt-8 grid max-w-2xl grid-cols-2 gap-x-5 gap-y-5 border-t border-line pt-6 sm:grid-cols-5">
             {OPEN_TO.map((o) => (
               <div key={o.label}>
                 <span aria-hidden="true" className="mb-2.5 flex h-[25px] items-end">

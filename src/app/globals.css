@@ -427,3 +427,34 @@ input[type="range"].jog::-moz-range-thumb {
   .print-cert { min-width: 0 !important; width: 297mm !important; }
   .print-cert .cert-sheet { width: 297mm !important; height: 210mm !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; }
 }
+
+/* Step rails fill as they scroll into view (where the browser supports scroll-driven animation) */
+@keyframes rail-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.rail-fill { transform: scaleX(1); }
+@supports (animation-timeline: view()) {
+  .rail-fill { animation: rail-grow linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }
+}
+
+/* The GRAAS network diagram: signals travel along the lines, the outer ring turns slowly */
+@keyframes flow { to { stroke-dashoffset: -24; } }
+.flow { stroke-dasharray: 3 9; animation: flow 1.4s linear infinite; }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { transform-box: fill-box; transform-origin: center; animation: spin-slow 60s linear infinite; }
+@keyframes node-pop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.node-pop { animation: node-pop 4.8s ease-in-out infinite; }
+
+/* Member cards fanned out on the membership page */
+@keyframes fan-in { from { opacity: 0; transform: translateY(24px) rotate(0deg); } }
+.fan-card { animation: fan-in 900ms var(--ease-out) both; }
+
+/* A soft sheen that crosses highlighted cards */
+@keyframes sheen { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(220%) skewX(-18deg); } }
+.sheen { position: relative; overflow: hidden; }
+.sheen::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent); animation: sheen 5.5s ease-in-out infinite; pointer-events: none; }
+
+/* Counting numbers */
+.tabular { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flow, .spin-slow, .node-pop, .fan-card, .sheen::after, .rail-fill { animation: none !important; }
+}

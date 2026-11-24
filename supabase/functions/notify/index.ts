@@ -1,8 +1,10 @@
-// Sends queued GRAAS messages. Called by the database (pg_net) right after messages are queued, and by pg_cron
-// every two minutes. Only a caller holding the notify key can start it; it takes no input.
+// Sends queued GRAAS messages and sets up logins for approved chapter students. Called by the database (pg_net) right
+// after messages are queued or students become ready, and by pg_cron every two minutes. Only a caller holding the notify
+// key can start it; it takes no input.
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { deliver, loadMessaging } from "../_shared/messaging.ts";
+import { provisionRows } from "../_shared/provision.ts";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "", {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
   const started = Date.now();
   let sent = 0;
   let failed = 0;
-  while (Date.now() - started < 45_000) {
+  while (Date.now() - started < 30_000) {
     const batch: any[] = (await admin.rpc("svc_claim_messages", { p_limit: 25 })).data ?? [];
     if (!batch.length) break;
     for (const msg of batch) {
@@ -41,5 +43,7 @@ Deno.serve(async (req) => {
       else failed++;
     }
   }
-  return json({ ok: true, sent, failed });
+  // Chapter students approved by GRAAS (or paid for by their chapter): accounts, memberships and login emails.
+  const logins = await provisionRows(admin, m, { deadline: started + 55_000 });
+  return json({ ok: true, sent, failed, logins });
 });

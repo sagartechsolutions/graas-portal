@@ -69,10 +69,10 @@ export default function Benefits() {
     <section id="benefits" className="section">
       <div className="shell">
         <div className="max-w-3xl">
-          <h2 className="h-section">What membership gives you.</h2>
+          <h2 className="h-section">Why people join GRAAS.</h2>
           <p className="lede mt-4">
             One membership covers how you learn, who you build with, where you
-            compete and how industry finds you.
+            compete and how industry finds you. Every benefit is listed on the membership page.
           </p>
         </div>
         <ul className="mt-8 grid gap-5 lg:grid-cols-12">
