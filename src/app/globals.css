@@ -1,26 +1,248 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* GRAAS design tokens — "work cell" palette: lab white, blueprint cobalt, robot orange, hazard yellow. */
+@theme {
+  --color-paper: #f4f6fb;
+  --color-surface: #ffffff;
+  --color-ink: #0c1330;
+  --color-ink2: #48526f;
+  --color-line: #d5dbe8;
+  --color-cobalt: #1f3fff;
+  --color-cobalt-soft: #e7ebff;
+  --color-signal: #ff5b1a;
+  --color-hazard: #ffc400;
+  --color-ok: #0b8f62;
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
+  --ease-servo: cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  -webkit-text-size-adjust: 100%;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-stretch: 100%;
+  font-feature-settings: "ss01" on;
+}
+::selection {
+  background: var(--color-hazard);
+  color: var(--color-ink);
+}
+:focus-visible {
+  outline: 3px solid var(--color-cobalt);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Type roles. Display uses Archivo's width axis at its narrowest: built like stencilled machine lettering. */
+.display {
+  font-stretch: 62%;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.wide {
+  font-stretch: 118%;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.lede {
+  font-size: clamp(1.05rem, 0.98rem + 0.4vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--color-ink2);
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Surfaces */
+.blueprint {
+  background-image:
+    linear-gradient(to right, rgb(31 63 255 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(31 63 255 / 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.hazard {
+  background-image: repeating-linear-gradient(-45deg, var(--color-hazard) 0 14px, var(--color-ink) 14px 28px);
+}
+.plate {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-ink);
+  border-radius: 14px;
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+}
+.plate-soft {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+/* Buttons: press down like a panel switch. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0.7rem 1.35rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-ink);
+  font-weight: 700;
+  font-stretch: 105%;
+  line-height: 1.1;
+  transition: transform 140ms var(--ease-servo), box-shadow 140ms var(--ease-servo), background-color 140ms;
+  box-shadow: 4px 4px 0 0 var(--color-ink);
+  cursor: pointer;
+}
+.btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 6px 6px 0 0 var(--color-ink);
+}
+.btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--color-ink);
+}
+.btn-go {
+  background: var(--color-signal);
+  color: var(--color-ink);
+}
+.btn-quiet {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.btn-ink {
+  background: var(--color-ink);
+  color: #fff;
+  box-shadow: 4px 4px 0 0 var(--color-cobalt);
+}
+.btn-ink:hover {
+  box-shadow: 6px 6px 0 0 var(--color-cobalt);
+}
+.btn[disabled] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Form controls */
+.field {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.field:hover {
+  border-color: var(--color-ink2);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-cobalt);
+  box-shadow: 0 0 0 3px rgb(31 63 255 / 0.18);
+}
+.field[aria-invalid="true"] {
+  border-color: #c2261a;
+}
+
+/* Hero slot: the word the arm swaps. Drops in wide, then is "pressed" to condensed. */
+@keyframes slot-in {
+  0% { transform: translateY(-0.55em); opacity: 0; font-stretch: 125%; }
+  55% { transform: translateY(0.04em); opacity: 1; font-stretch: 110%; }
+  100% { transform: translateY(0); font-stretch: 62%; }
+}
+.slot-word {
+  display: inline-block;
+  animation: slot-in 620ms var(--ease-servo) both;
+}
+
+/* Conveyor belt */
+@keyframes belt-move {
+  to { transform: translateX(-50%); }
+}
+@keyframes roller {
+  to { background-position: -28px 0; }
+}
+.belt-track {
+  display: flex;
+  width: max-content;
+  animation: belt-move 38s linear infinite;
+}
+.belt:hover .belt-track,
+.belt:focus-within .belt-track {
+  animation-play-state: paused;
+}
+.belt-rollers {
+  background-image: radial-gradient(circle at 14px 50%, var(--color-ink) 0 5px, transparent 5.5px);
+  background-size: 28px 100%;
+  animation: roller 0.9s linear infinite;
+}
+.belt:hover .belt-rollers {
+  animation-play-state: paused;
+}
+
+/* Pass printing out of the slot after pre-registration */
+@keyframes print-out {
+  from { clip-path: inset(0 0 100% 0); transform: translateY(-18px); }
+  to { clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+.print-out {
+  animation: print-out 900ms var(--ease-servo) both;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Range sliders used in the jog playground */
+input[type="range"].jog {
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"].jog::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-line);
+}
+input[type="range"].jog::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-line);
+}
+input[type="range"].jog::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--color-signal);
+  border: 2px solid var(--color-ink);
+}
+input[type="range"].jog::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-signal);
+  border: 2px solid var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .belt-track, .belt-rollers, .slot-word, .print-out { animation: none !important; }
+  .belt-track { flex-wrap: wrap; width: auto; }
+  .btn { transition: none; }
 }
