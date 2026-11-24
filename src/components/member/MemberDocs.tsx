@@ -473,7 +473,7 @@ export function Certificate(props: DocProps) {
             <div className="absolute inset-x-0 text-center" style={{ bottom: mu(20) }}>
               <Seal id={`seal-cert-${m.id}`} style={{ width: mu(38), height: mu(38), display: "block", margin: "0 auto" }} />
               <p className="text-slate7" style={{ fontSize: mu(2.5), marginTop: mu(1.2) }}>
-                Issued <span className="readout">{shortDate(issued)}</span>, digitally, by the Global Robotics And Automation Society
+                Issued {shortDate(issued)}, digitally, by the Global Robotics And Automation Society
               </p>
             </div>
 

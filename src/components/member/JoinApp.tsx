@@ -50,7 +50,7 @@ export default function JoinApp({ plans, options }: { plans: Plan[]; options: Pr
     const sb = browserClient();
     const details = { gender: v("gender"), course: v("course"), branch: v("branch"), study_year: v("study_year"), designation: v("designation") };
     if (signedIn) {
-      const { data } = await sb.rpc("member_apply", { p_plan_code: code, p_org: v("organisation"), p_details: details });
+      const { data } = await sb.rpc("member_reapply", { p_plan_code: code, p_org: v("organisation"), p_details: details });
       if (data?.ok) return router.push("/account?welcome=1");
       setErr({ field: data?.field, error: data?.error ?? "Could not save the application. Please try again." });
       return setBusy(false);

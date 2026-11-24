@@ -23,17 +23,16 @@ create table if not exists public.plan_change_requests (
 create index if not exists plan_change_requests_user on public.plan_change_requests (user_id, created_at desc);
 create unique index if not exists plan_change_requests_one_open on public.plan_change_requests (membership_id) where status in ('pending', 'awaiting_payment');
 alter table public.plan_change_requests enable row level security;
-drop policy if exists change_select on public.plan_change_requests;
 create policy change_select on public.plan_change_requests for select to authenticated
   using (user_id = (select auth.uid()) or private.is_staff(array['membership_desk', 'finance']::public.staff_role[]));
 revoke insert, update, delete on public.plan_change_requests from anon, authenticated;
 grant select on public.plan_change_requests to authenticated;
-drop trigger if exists plan_change_requests_audit on public.plan_change_requests;
 create trigger plan_change_requests_audit after insert or update or delete on public.plan_change_requests
   for each row execute function private.audit_row();
 
-alter table public.orders drop constraint if exists orders_kind_check;
-alter table public.orders add constraint orders_kind_check check (kind in ('new', 'renewal', 'change'));
+-- What an order pays for: a membership (new or renewal) or a type change. Type-change orders keep kind 'renewal'
+-- for the existing kind rule and are told apart by purpose.
+alter table public.orders add column if not exists purpose text not null default 'membership' check (purpose in ('membership', 'change'));
 
 -- Suggested fee difference: yearly fee difference x days left / 365, less the length discount the member paid with,
 -- rounded to the rupee. Zero for a move to a cheaper type; null while a fee is not set.
@@ -49,7 +48,7 @@ begin
   v_diff := (tp.price_inr - fp.price_inr) * 100;
   if v_diff <= 0 then return 0; end if;
   v_days := case when m.ends_on is null then 365 else greatest(m.ends_on - private.today() + 1, 0) end;
-  select * into o from public.orders where membership_id = m.id and status = 'paid' and kind in ('new', 'renewal')
+  select * into o from public.orders where membership_id = m.id and status = 'paid' and purpose = 'membership'
   order by paid_at desc nulls last limit 1;
   if found and o.base_paise > 0 then v_pct := o.term_discount_paise::numeric / o.base_paise; end if;
   return (round(v_diff * v_days / 365.0 * (1 - v_pct) / 100) * 100)::int;
@@ -81,7 +80,7 @@ begin
   where id = r.membership_id;
   update public.profiles set kind = tp.audience::text,
     organisation = coalesce(left(nullif(trim(coalesce(d->>'organisation', '')), ''), 120), organisation),
-    designation = case when d ? 'designation' then left(nullif(trim(coalesce(d->>'designation', '')), ''), 120) else designation end,
+    designation = case when tp.audience::text = 'student' then null when d ? 'designation' then left(nullif(trim(coalesce(d->>'designation', '')), ''), 120) else designation end,
     gender = coalesce(v->>'gender', gender), course = v->>'course', branch = v->>'branch', study_year = v->>'study_year'
   where id = r.user_id;
   update public.plan_change_requests set status = 'done', completed_at = now() where id = p_id;
@@ -198,9 +197,9 @@ begin
   select * into p from public.profiles where id = p_user;
   v_gst := round(r.charge_paise * tp.gst_percent / 100)::int;
   update public.orders set status = 'cancelled' where membership_id = m.id and status = 'created';
-  insert into public.orders (user_id, membership_id, plan_id, plan_name, kind, payer_name, payer_email, payer_phone,
+  insert into public.orders (user_id, membership_id, plan_id, plan_name, kind, purpose, payer_name, payer_email, payer_phone,
     base_paise, discount_paise, gst_percent, gst_paise, total_paise, term_years, term_discount_paise, term_label)
-  values (p_user, m.id, tp.id, tp.name, 'change', p.full_name, p.email, p.phone,
+  values (p_user, m.id, tp.id, tp.name, 'renewal', 'change', p.full_name, p.email, p.phone,
     r.charge_paise, 0, tp.gst_percent, v_gst, r.charge_paise + v_gst, 1, 0, 'change from ' || fp.name)
   returning id into v_id;
   update public.plan_change_requests set order_id = v_id where id = r.id;
@@ -223,7 +222,7 @@ begin
     receipt_no = 'GRAAS/' || v_fy || '/' || lpad(nextval('private.receipt_no_seq')::text, 5, '0') where id = p_order;
   if o.coupon_code is not null then update public.coupons set used_count = used_count + 1 where code = o.coupon_code; end if;
   select * into m from public.memberships where id = o.membership_id for update;
-  if o.kind = 'change' then
+  if o.purpose = 'change' then
     select * into r from public.plan_change_requests where order_id = o.id and status = 'awaiting_payment' for update;
     if found and m.status = 'active' then
       perform private.apply_change(r.id);
@@ -259,9 +258,9 @@ begin
     status = case when refunded_paise + r.amount_paise >= total_paise then 'refunded'::public.order_status else status end
   where id = r.order_id returning * into o;
   if o.status = 'refunded' then
-    if o.kind = 'new' then
+    if o.kind = 'new' and o.purpose = 'membership' then
       update public.memberships set status = 'cancelled', decision_reason = 'Fee refunded' where id = o.membership_id and status in ('pending_payment', 'active', 'suspended');
-    elsif o.kind = 'change' then
+    elsif o.purpose = 'change' then
       update public.orders set needs_review = true, review_note = 'Type change fee refunded. The member keeps the new type until staff change it back.' where id = o.id;
     else
       update public.orders set needs_review = true, review_note = 'Renewal fee refunded. Adjust the membership end date if needed.' where id = o.id;
@@ -285,7 +284,7 @@ begin
     perform private.enqueue(new.user_id, 'payment_received', v, 'paid:' || new.id);
     perform private.enqueue_staff('staff_payment_received', v || jsonb_build_object(
       'applicant', coalesce(p.full_name, new.payer_name, ''), 'applicant_email', coalesce(p.email, new.payer_email, ''),
-      'kind', case new.kind when 'renewal' then 'renewal' when 'change' then 'membership type change' else 'new membership' end));
+      'kind', case when new.purpose = 'change' then 'membership type change' when new.kind = 'renewal' then 'renewal' else 'new membership' end));
   elsif new.status = 'failed' and old.status = 'created' then
     perform private.enqueue(new.user_id, 'payment_failed', v);
   end if;

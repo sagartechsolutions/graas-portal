@@ -184,8 +184,8 @@ begin
 end $$;
 
 -- Before payment a member changes type themselves, giving the details the new type needs.
-drop function if exists public.member_switch_plan(text);
-create or replace function public.member_switch_plan(p_plan_code text, p_details jsonb default null)
+-- (A new function; the older member_switch_plan(text) is left in place and no longer used by the website.)
+create or replace function public.member_switch_type(p_plan_code text, p_details jsonb default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare m public.memberships; pl public.membership_plans; merged jsonb; v jsonb; v_chk jsonb;
 begin
@@ -214,12 +214,12 @@ begin
   if not pl.requires_approval and pl.price_inr = 0 then perform private.activate_membership(m.id, 'new'); end if;
   return jsonb_build_object('ok', true);
 end $$;
-revoke execute on function public.member_switch_plan(text, jsonb) from public, anon;
-grant execute on function public.member_switch_plan(text, jsonb) to authenticated;
+revoke execute on function public.member_switch_type(text, jsonb) from public, anon;
+grant execute on function public.member_switch_type(text, jsonb) to authenticated;
 
 -- Signed-in re-application can carry the details for the chosen type.
-drop function if exists public.member_apply(text, text);
-create or replace function public.member_apply(p_plan_code text, p_org text default null, p_details jsonb default null)
+-- (A new function; the older member_apply(text, text) is left in place and no longer used by the website.)
+create or replace function public.member_reapply(p_plan_code text, p_org text default null, p_details jsonb default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare pl public.membership_plans; merged jsonb; v jsonb; v_chk jsonb;
 begin
@@ -239,8 +239,8 @@ begin
   where id = (select auth.uid());
   return private.apply_membership((select auth.uid()), p_plan_code, p_org);
 end $$;
-revoke execute on function public.member_apply(text, text, jsonb) from public, anon;
-grant execute on function public.member_apply(text, text, jsonb) to authenticated;
+revoke execute on function public.member_reapply(text, text, jsonb) from public, anon;
+grant execute on function public.member_reapply(text, text, jsonb) to authenticated;
 
 -- Photo: stored privately at member-photos/<user id>/photo.jpg. This records that one exists, and when it changed.
 create or replace function public.member_set_photo(p_on boolean)
@@ -254,17 +254,13 @@ grant execute on function public.member_set_photo(boolean) to authenticated;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('member-photos', 'member-photos', false, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do nothing;
-drop policy if exists member_photos_select on storage.objects;
 create policy member_photos_select on storage.objects for select to authenticated
   using (bucket_id = 'member-photos' and ((storage.foldername(name))[1] = (select auth.uid())::text or private.is_staff()));
-drop policy if exists member_photos_insert on storage.objects;
 create policy member_photos_insert on storage.objects for insert to authenticated
   with check (bucket_id = 'member-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
-drop policy if exists member_photos_update on storage.objects;
 create policy member_photos_update on storage.objects for update to authenticated
   using (bucket_id = 'member-photos' and (storage.foldername(name))[1] = (select auth.uid())::text)
   with check (bucket_id = 'member-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
-drop policy if exists member_photos_delete on storage.objects;
 create policy member_photos_delete on storage.objects for delete to authenticated
   using (bucket_id = 'member-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 

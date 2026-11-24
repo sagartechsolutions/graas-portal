@@ -243,7 +243,7 @@ function Receipt({ o, org }: { o: any; org: any }) {
       <dl className="py-5 text-[0.95rem]">
         <div className={row}>
           <dt>
-            {o.kind === "change" ? `Change of membership type to ${o.plan_name}, ${o.term_label ?? ""}` : `${o.plan_name} membership, ${o.term_label ?? "1 year"} (${o.kind === "renewal" ? "renewal" : "new"})`}
+            {o.purpose === "change" ? `Change of membership type to ${o.plan_name}, ${o.term_label ?? ""}` : `${o.plan_name} membership, ${o.term_label ?? "1 year"} (${o.kind === "renewal" ? "renewal" : "new"})`}
           </dt>
           <dd className="readout">{inr(o.base_paise)}</dd>
         </div>
@@ -332,7 +332,7 @@ function SwitchType({ a, plans, reload }: { a: Account; plans: Plan[]; reload: (
     if (!target) return;
     setBusy(true);
     setErr("");
-    const { data } = await sb().rpc("member_switch_plan", { p_plan_code: to, p_details: formDetails(e.currentTarget) });
+    const { data } = await sb().rpc("member_switch_type", { p_plan_code: to, p_details: formDetails(e.currentTarget) });
     setBusy(false);
     if (!data?.ok) return setErr(data?.error ?? "That did not work. Please try again.");
     reload(`Your membership is now ${target.name}. Your member ID will show these details.`);
@@ -1197,7 +1197,7 @@ export default function AccountApp({ plans }: { plans: Plan[] }) {
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
                       <div>
                         <p className="font-semibold">
-                          {o.kind === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
+                          {o.purpose === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
                         </p>
                         <p className="text-sm text-ink2">
                           {shortDate(o.paid_at ?? o.created_at)}
