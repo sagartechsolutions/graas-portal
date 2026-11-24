@@ -464,6 +464,41 @@ Deno.serve(async (req) => {
       return out({ ok: true });
     }
 
+    case "pin_code": {
+      if (!role || !user?.email) return fail("Only GRAAS staff can do this.");
+      const m = await loadMessaging(admin);
+      if (!emailReady(m)) return fail("Email sending must be on to set a PIN. Switch it on under Messages first.");
+      const p = await profileOf(user.id);
+      const r = await sendCode(m, { purpose: "staff_pin", channel: "email", target: normEmail(user.email), user: user.id, ip: await ipHash(), event: "code_staff_pin", name: firstName(p?.full_name) });
+      return out({ ...r, sent_to: maskEmail(normEmail(user.email)) });
+    }
+
+    case "set_pin": {
+      if (!role || !user?.email) return fail("Only GRAAS staff can do this.");
+      const pin = String(b.pin ?? "");
+      const code = String(b.code ?? "").replace(/\D/g, "").slice(0, 6);
+      if (!/^[0-9]{6}$/.test(pin)) return fail("The PIN must be exactly 6 digits.", { field: "pin" });
+      if (/^(\d)\1{5}$/.test(pin) || "01234567890".includes(pin) || "09876543210".includes(pin) || ["121212", "112233", "123123", "123321", "111222", "101010"].includes(pin)) {
+        return fail("Choose a PIN that is harder to guess: not all the same digit and not in order like 123456.", { field: "pin" });
+      }
+      if (code.length !== 6) return fail("Enter the 6-digit code from the email.", { field: "code" });
+      const check = createClient(SB_URL, ANON, noSession);
+      const s = await check.auth.signInWithPassword({ email: user.email, password: String(b.password ?? "") });
+      if (s.error || !s.data?.session) return fail("Your account password is not right.", { field: "password" });
+      await check.auth.signOut();
+      const c = await admin.rpc("svc_check_code", { p_purpose: "staff_pin", p_target: normEmail(user.email), p_code: code });
+      if (c.error || !c.data?.ok) return out({ ...(c.data ?? { ok: false, error: "Could not check the code. Please try again." }), field: "code" });
+      const r = await admin.rpc("svc_set_pin", { p_user: user.id, p_pin: pin });
+      if (r.error || !r.data?.ok) return out(r.data ?? { ok: false, error: "Could not save the PIN. Please try again." });
+      await audit("security_pin_set", "staff_members", user.id);
+      const m = await loadMessaging(admin);
+      const p = await profileOf(user.id);
+      const vars = { name: firstName(p?.full_name), when: nowIST() };
+      const sent = await deliver(m, "security_pin_changed", "email", normEmail(user.email), vars);
+      await admin.rpc("svc_log_message", { p_user: user.id, p_event: "security_pin_changed", p_channel: "email", p_to: normEmail(user.email), p_vars: vars, p_ok: sent.ok, p_provider_id: sent.id ?? null, p_error: sent.ok ? null : sent.error ?? null, p_subject: sent.subject ?? null, p_actor: user.id });
+      return out({ ok: true });
+    }
+
     case "msg_test": {
       if (!is("communications")) return fail("Your role cannot send tests.");
       const m0 = await loadMessaging(admin);

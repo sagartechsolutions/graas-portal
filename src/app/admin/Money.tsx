@@ -2,9 +2,10 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Session } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { portal } from "@/lib/browser";
 import { inr, shortDate } from "@/lib/money";
+import { PinInput, PinNote, PinSetup, usePinStatus } from "./Pin";
 import { Badge, Msg, Stat, type Tone, downloadCsv, lbl, refreshSite, sb, small } from "./shared";
 
 const ORDER_TONE: Record<string, Tone> = { paid: "good", created: "plain", failed: "bad", refunded: "plain", cancelled: "plain" };
@@ -344,6 +345,9 @@ export function Gateway({ session }: { session: Session }) {
   const [busy, setBusy] = useState(false);
   const [askClear, setAskClear] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pin, reloadPin] = usePinStatus();
+  const [resetPin, setResetPin] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
     const { data } = await sb().from("site_settings").select("value").eq("key", "gateway").maybeSingle();
@@ -360,9 +364,19 @@ export function Gateway({ session }: { session: Session }) {
     const f = new FormData(form);
     setBusy(true);
     setMsg(null);
-    const { data, error } = await sb().rpc("staff_set_gateway", { p_key_id: String(f.get("key_id") ?? ""), p_key_secret: String(f.get("key_secret") ?? ""), p_webhook_secret: String(f.get("webhook_secret") ?? ""), p_enabled: enabled });
+    const { data, error } = await sb().rpc("staff_set_gateway", {
+      p_key_id: String(f.get("key_id") ?? ""),
+      p_key_secret: String(f.get("key_secret") ?? ""),
+      p_webhook_secret: String(f.get("webhook_secret") ?? ""),
+      p_enabled: enabled,
+      p_clear: false,
+      p_pin: String(f.get("pin") ?? ""),
+    });
     setBusy(false);
-    if (error || !data?.ok) return setMsg({ tone: "bad", text: data?.error ?? error?.message ?? "Could not save." });
+    if (error || !data?.ok) {
+      reloadPin();
+      return setMsg({ tone: "bad", text: data?.error ?? error?.message ?? "Could not save." });
+    }
     form.reset();
     await refreshSite(session);
     setMsg({ tone: "good", text: "Saved. Use Test connection to confirm that Razorpay accepts the keys." });
@@ -375,8 +389,10 @@ export function Gateway({ session }: { session: Session }) {
     setMsg(r.ok ? { tone: "good", text: `Razorpay accepted the keys (${r.mode} mode).` } : { tone: "bad", text: r.error ?? "Test failed." });
   }
   async function clear() {
-    const { data } = await sb().rpc("staff_set_gateway", { p_key_id: null, p_key_secret: null, p_webhook_secret: null, p_enabled: false, p_clear: true });
+    const pinValue = formRef.current ? String(new FormData(formRef.current).get("pin") ?? "") : "";
+    const { data } = await sb().rpc("staff_set_gateway", { p_key_id: null, p_key_secret: null, p_webhook_secret: null, p_enabled: false, p_clear: true, p_pin: pinValue });
     setAskClear(false);
+    reloadPin();
     setMsg(data?.ok ? { tone: "good", text: "Keys removed and online payment switched off." } : { tone: "bad", text: data?.error ?? "Could not remove the keys." });
     load();
   }
@@ -393,7 +409,19 @@ export function Gateway({ session }: { session: Session }) {
       </div>
       {msg && <Msg tone={msg.tone}>{msg.text}</Msg>}
 
-      <form onSubmit={save} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
+      {pin && (!pin.has_pin || resetPin) && (
+        <PinSetup
+          hasPin={pin.has_pin}
+          onCancel={pin.has_pin ? () => setResetPin(false) : undefined}
+          onDone={() => {
+            setResetPin(false);
+            reloadPin();
+            setMsg({ tone: "good", text: "Your security PIN is saved. You need it from now on to change keys or switch payment on or off." });
+          }}
+        />
+      )}
+
+      <form ref={formRef} onSubmit={save} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
         <h3 className="text-xl font-semibold">Razorpay keys</h3>
         <p className="text-sm text-ink2">Paste these yourself from the Razorpay dashboard (Account and Settings, API Keys). They are stored where the website and staff screens cannot read them back; only the payment server uses them. Leave a box empty to keep what is already saved.</p>
         <div className="grid gap-4 md:grid-cols-2">
@@ -414,8 +442,10 @@ export function Gateway({ session }: { session: Session }) {
           <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           Online payment switched on
         </label>
+        <PinInput hint="Needed to save, to switch payment on or off, and to remove the keys." />
+        <PinNote status={pin} onReset={() => setResetPin(true)} />
         <div className="flex flex-wrap gap-3">
-          <button className="btn btn-go !min-h-10 !py-2" disabled={busy}>
+          <button className="btn btn-go !min-h-10 !py-2" disabled={busy || !pin?.has_pin}>
             Save
           </button>
           <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={test} disabled={busy}>
@@ -432,7 +462,7 @@ export function Gateway({ session }: { session: Session }) {
               </button>
             </span>
           ) : (
-            <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => setAskClear(true)}>
+            <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => setAskClear(true)} disabled={!pin?.has_pin}>
               Remove keys
             </button>
           )}

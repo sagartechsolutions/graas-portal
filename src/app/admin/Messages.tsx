@@ -1,9 +1,10 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { portal } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
+import { PinInput, PinNote, PinSetup, usePinStatus } from "./Pin";
 import { Badge, Msg, Stat, lbl, sb, small, type Tone } from "./shared";
 
 type Template = {
@@ -127,6 +128,10 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
   const [waTestTo, setWaTestTo] = useState("");
   const [sync, setSync] = useState<any>(null);
   const [ask, setAsk] = useState<"" | "email" | "whatsapp">("");
+  const [pin, reloadPin] = usePinStatus();
+  const [resetPin, setResetPin] = useState(false);
+  const emailForm = useRef<HTMLFormElement>(null);
+  const waForm = useRef<HTMLFormElement>(null);
 
   async function setMessaging(p: any, ok: string) {
     setBusy(true);
@@ -134,6 +139,7 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
     const { data, error } = await sb().rpc("staff_set_messaging", { p });
     setBusy(false);
     if (error || !data?.ok) {
+      reloadPin();
       setMsg({ tone: "bad", text: data?.error ?? error?.message ?? "Could not save." });
       return false;
     }
@@ -146,20 +152,26 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
     const form = e.currentTarget;
     const f = new FormData(form);
     const ok = await setMessaging(
-      { email: { enabled: emailOn, sender_name: f.get("sender_name"), sender_email: f.get("sender_email"), reply_to: f.get("reply_to"), api_key: f.get("api_key") } },
+      { email: { enabled: emailOn, sender_name: f.get("sender_name"), sender_email: f.get("sender_email"), reply_to: f.get("reply_to"), api_key: f.get("api_key") }, pin: f.get("pin") },
       emailOn ? "Saved. Email is on. Send a test to check that it arrives." : "Saved. Email stays off until you tick Email sending is on.",
     );
-    if (ok) (form.elements.namedItem("api_key") as HTMLInputElement).value = "";
+    if (ok) {
+      (form.elements.namedItem("api_key") as HTMLInputElement).value = "";
+      (form.elements.namedItem("pin") as HTMLInputElement).value = "";
+    }
   }
   async function saveWa(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
     const ok = await setMessaging(
-      { whatsapp: { enabled: waOn, phone_number_id: f.get("phone_number_id"), waba_id: f.get("waba_id"), display_phone: f.get("display_phone"), api_version: f.get("api_version"), token: f.get("token") } },
+      { whatsapp: { enabled: waOn, phone_number_id: f.get("phone_number_id"), waba_id: f.get("waba_id"), display_phone: f.get("display_phone"), api_version: f.get("api_version"), token: f.get("token") }, pin: f.get("pin") },
       "Saved. Press Check with Meta to confirm the number and see which templates are approved.",
     );
-    if (ok) (form.elements.namedItem("token") as HTMLInputElement).value = "";
+    if (ok) {
+      (form.elements.namedItem("token") as HTMLInputElement).value = "";
+      (form.elements.namedItem("pin") as HTMLInputElement).value = "";
+    }
   }
   async function saveRules(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -200,7 +212,12 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
   }
   async function clear(kind: "email" | "whatsapp") {
     setAsk("");
-    await setMessaging(kind === "email" ? { email: { enabled: false, clear_key: true } } : { whatsapp: { enabled: false, clear_token: true } }, kind === "email" ? "Brevo key removed and email switched off." : "WhatsApp token removed and WhatsApp switched off.");
+    const form = kind === "email" ? emailForm.current : waForm.current;
+    const pinValue = form ? String(new FormData(form).get("pin") ?? "") : "";
+    await setMessaging(
+      kind === "email" ? { email: { enabled: false, clear_key: true }, pin: pinValue } : { whatsapp: { enabled: false, clear_token: true }, pin: pinValue },
+      kind === "email" ? "Brevo key removed and email switched off." : "WhatsApp token removed and WhatsApp switched off.",
+    );
   }
 
   const e = s.email ?? {};
@@ -217,8 +234,19 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
       </div>
       {msg && <Msg tone={msg.tone}>{msg.text}</Msg>}
       {!can && <Msg tone="plain">Only a super admin can change these settings. You can see them, read the sent messages and edit wording if your role allows.</Msg>}
+      {can && pin && (!pin.has_pin || resetPin) && (
+        <PinSetup
+          hasPin={pin.has_pin}
+          onCancel={pin.has_pin ? () => setResetPin(false) : undefined}
+          onDone={() => {
+            setResetPin(false);
+            reloadPin();
+            setMsg({ tone: "good", text: "Your security PIN is saved." });
+          }}
+        />
+      )}
 
-      <form onSubmit={saveEmail} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
+      <form ref={emailForm} onSubmit={saveEmail} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xl font-semibold">Email, through Brevo</h3>
           <Badge tone={s.email_ready ? "good" : "warn"}>{s.email_ready ? "Sending" : "Not sending"}</Badge>
@@ -248,6 +276,12 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
           <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={emailOn} onChange={(x) => setEmailOn(x.target.checked)} disabled={!can} />
           Email sending is on
         </label>
+        {can && (
+          <>
+            <PinInput hint="Needed only when you paste or remove the Brevo key." />
+            <PinNote status={pin} onReset={() => setResetPin(true)} />
+          </>
+        )}
         {can && (
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn btn-go !min-h-10 !py-2" disabled={busy}>
@@ -283,7 +317,7 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
         </div>
       </form>
 
-      <form onSubmit={saveWa} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
+      <form ref={waForm} onSubmit={saveWa} className="plate grid gap-4 p-5 sm:p-6" autoComplete="off">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-xl font-semibold">WhatsApp, through Meta</h3>
           <Badge tone={s.wa_codes_ready ? "good" : "warn"}>{s.wa_codes_ready ? "Sending" : w.enabled ? "Waiting for approval" : "Not set up"}</Badge>
@@ -321,6 +355,12 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
           <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={waOn} onChange={(x) => setWaOn(x.target.checked)} disabled={!can} />
           WhatsApp is on
         </label>
+        {can && (
+          <>
+            <PinInput hint="Needed only when you paste or remove the WhatsApp token." />
+            <PinNote status={pin} onReset={() => setResetPin(true)} />
+          </>
+        )}
         {can && (
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn btn-go !min-h-10 !py-2" disabled={busy}>

@@ -1,0 +1,9 @@
+-- Applied as `security_pin` (full SQL is in supabase_migrations.schema_migrations).
+-- A 6-digit security PIN per admin, stored only as a bcrypt hash in private.staff_pins.
+-- public.staff_set_gateway(..., p_pin) and public.staff_set_messaging(p) now check the PIN (messaging only when a key or
+-- token is pasted or removed) and then call the old functions, moved to private.set_gateway_core and
+-- private.set_messaging_core. Five wrong tries lock key changes for 30 minutes and email the admin and the alert address.
+-- Every successful key change emails a "staff_keys_changed" alert. A trigger blocks direct writes to the gateway and
+-- messaging rows of site_settings by signed-in users. Setting or resetting a PIN goes through the portal function
+-- (pin_code, set_pin): account password plus a code to the admin's own email. New templates: code_staff_pin,
+-- security_pin_changed, security_pin_locked, staff_pin_locked, staff_keys_changed.
