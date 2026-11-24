@@ -91,8 +91,9 @@ export default async function Plans({ heading = true }: { heading?: boolean }) {
                     How schools join
                   </Link>
                 ) : (
-                  <Link href={`/join?plan=${p.code}`} className="btn btn-primary w-full !min-h-12">
-                    Choose {p.name.toLowerCase()}
+                  <Link href={`/join?plan=${p.code}`} aria-label={`Join as ${p.name}`} className="btn btn-primary w-full !min-h-12 whitespace-nowrap">
+                    <span className="xl:hidden">Choose {p.name.toLowerCase()}</span>
+                    <span className="hidden xl:inline">Join now</span>
                   </Link>
                 )}
               </div>
