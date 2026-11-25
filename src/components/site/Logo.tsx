@@ -33,7 +33,7 @@ export function LogoMark({ size = 36, tone = "dark", animate = false, className 
 /** How the mark and the name sit together. "short" is the mark with GRAAS only. */
 export type Lockup = "short" | "stack" | "split" | "name";
 /** The lockup used in the site header (and wherever `brand` is asked for). Chosen by Sagar. */
-export const BRAND_LOCKUP: Lockup = "short";
+export const BRAND_LOCKUP: Lockup = "stack";
 
 export default function Logo({ tone = "dark", full = false, lockup, brand = false }: { tone?: "dark" | "light"; full?: boolean; lockup?: Lockup; brand?: boolean }) {
   const v: Lockup = lockup ?? (brand ? BRAND_LOCKUP : full ? "stack" : "short");
