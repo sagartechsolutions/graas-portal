@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { portal } from "@/lib/browser";
+import { portal, waAdmin } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
 import { PinInput, PinNote, PinSetup, usePinStatus } from "./Pin";
 import { Badge, Msg, Stat, lbl, sb, small, type Tone } from "./shared";
@@ -128,6 +128,7 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
   const [waTestTo, setWaTestTo] = useState("");
   const [sync, setSync] = useState<any>(null);
   const [ask, setAsk] = useState<"" | "email" | "whatsapp">("");
+  const [regPin, setRegPin] = useState("");
   const [pin, reloadPin] = usePinStatus();
   const [resetPin, setResetPin] = useState(false);
   const emailForm = useRef<HTMLFormElement>(null);
@@ -165,13 +166,36 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
     const form = e.currentTarget;
     const f = new FormData(form);
     const ok = await setMessaging(
-      { whatsapp: { enabled: waOn, phone_number_id: f.get("phone_number_id"), waba_id: f.get("waba_id"), display_phone: f.get("display_phone"), api_version: f.get("api_version"), token: f.get("token") }, pin: f.get("pin") },
+      { whatsapp: { enabled: waOn, phone_number_id: f.get("phone_number_id"), waba_id: f.get("waba_id"), display_phone: f.get("display_phone"), api_version: f.get("api_version"), token: f.get("token"), app_secret: f.get("app_secret"), auto_reply: f.get("auto_reply") }, pin: f.get("pin") },
       "Saved. Press Check with Meta to confirm the number and see which templates are approved.",
     );
     if (ok) {
       (form.elements.namedItem("token") as HTMLInputElement).value = "";
+      (form.elements.namedItem("app_secret") as HTMLInputElement).value = "";
       (form.elements.namedItem("pin") as HTMLInputElement).value = "";
     }
+  }
+  async function registerNumber() {
+    if (!/^[0-9]{6}$/.test(regPin)) return setMsg({ tone: "bad", text: "Choose a 6-digit two-step PIN for the number first." });
+    setBusy(true);
+    setMsg(null);
+    const r = await waAdmin("wa_register", { pin: regPin });
+    setBusy(false);
+    setRegPin("");
+    setMsg(r.ok ? { tone: "good", text: "The number is registered with Meta. Keep the two-step PIN somewhere safe: Meta asks for it if the number is ever moved." } : { tone: "bad", text: r.error ?? "Meta did not register the number." });
+  }
+  async function updateProfile() {
+    setBusy(true);
+    setMsg(null);
+    const r = await waAdmin("wa_profile");
+    setBusy(false);
+    setMsg(r.ok ? { tone: "good", text: "The GRAAS WhatsApp profile now shows the about line, description, email and website. Add the logo as the profile photo in WhatsApp Manager." } : { tone: "bad", text: r.error ?? "Meta did not accept the profile." });
+  }
+  function copy(text: string, what: string) {
+    navigator.clipboard?.writeText(text).then(
+      () => setMsg({ tone: "good", text: `${what} copied.` }),
+      () => setMsg({ tone: "bad", text: "Could not copy. Select the text and copy it yourself." }),
+    );
   }
   async function saveRules(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -201,7 +225,7 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
   async function metaSync(create: boolean) {
     setBusy(true);
     setMsg(null);
-    const r = await portal("wa_sync", { create });
+    const r = await waAdmin("wa_sync", { create });
     setBusy(false);
     if (!r.ok) return setMsg({ tone: "bad", text: r.error ?? "Meta could not be reached." });
     setSync(r);
@@ -323,11 +347,14 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
           <Badge tone={s.wa_codes_ready ? "good" : "warn"}>{s.wa_codes_ready ? "Sending" : w.enabled ? "Waiting for approval" : "Not set up"}</Badge>
         </div>
         <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-ink2">
-          <li>At business.facebook.com, open WhatsApp Manager and add GRAAS&apos;s number. The number must not be on the WhatsApp app. Meta verifies it with an SMS or call.</li>
-          <li>Add a payment method in WhatsApp Manager. Codes and account updates cost about ₹0.12 each; news costs about ₹0.86 each.</li>
-          <li>In Business settings, create a system user with full control of the WhatsApp account, and generate a permanent access token with the whatsapp_business_messaging and whatsapp_business_management permissions.</li>
-          <li>Paste the Phone number ID, the WhatsApp Business Account ID and the token below, tick WhatsApp is on, and save.</li>
-          <li>Press Submit templates to Meta. When Meta approves them, codes and updates start going out on WhatsApp by themselves.</li>
+          <li>Take the number off the WhatsApp app on the phone (WhatsApp, Settings, Account, Delete my account). It must still get SMS or calls.</li>
+          <li>In the Meta app GRAAS Portal (developers.facebook.com), open WhatsApp, API Setup, add the number with the display name GRAAS and type the code Meta sends. Copy the Phone number ID and the WhatsApp Business Account ID below.</li>
+          <li>In WhatsApp Manager, add a payment method. Codes and account updates cost about ₹0.12 each; news costs about ₹0.86 each.</li>
+          <li>In Business settings, System users: add an admin system user, give it the GRAAS Portal app and the WhatsApp account with full control, and generate a token that never expires with whatsapp_business_messaging and whatsapp_business_management. Paste it below yourself.</li>
+          <li>In the app, App settings, Basic: press Show next to App secret and paste it below yourself. Save with your security PIN.</li>
+          <li>Choose a 6-digit two-step PIN for the number and press Register the number. Write the PIN down.</li>
+          <li>In the app, WhatsApp, Configuration: paste the Callback URL and Verify token shown below, press Verify and save, then subscribe to messages, message_template_status_update, phone_number_quality_update and account_update. Publish the app (Live).</li>
+          <li>Press Check with Meta, then Submit templates to Meta. Approved templates start working by themselves. Verify the business in Security Centre to raise Meta&apos;s limit from 250 to 2,000 people a day.</li>
         </ol>
         <div className="grid gap-4 md:grid-cols-2">
           <label className={lbl}>
@@ -346,10 +373,49 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
             Graph API version
             <input name="api_version" className="field readout" defaultValue={w.api_version ?? "v25.0"} disabled={!can} />
           </label>
-          <label className={`${lbl} md:col-span-2`}>
+          <label className={lbl}>
             Permanent access token
             <input name="token" type="password" className="field" placeholder={s.has_wa_token ? "Saved. Paste a new token to replace it" : "Paste the system user token"} autoComplete="new-password" disabled={!can} />
           </label>
+          <label className={lbl}>
+            Meta app secret
+            <input name="app_secret" type="password" className="field" placeholder={s.has_wa_app_secret ? "Saved. Paste a new secret to replace it" : "32 letters and digits"} autoComplete="new-password" disabled={!can} />
+          </label>
+          <label className={`${lbl} md:col-span-2`}>
+            Automatic reply when someone writes to the number
+            <textarea
+              name="auto_reply"
+              rows={3}
+              maxLength={700}
+              className="field"
+              defaultValue={w.auto_reply ?? "Thank you for writing to GRAAS. Our team reads messages here and will reply as soon as they can. For faster help, write to connect@graas.org.in or use Help in your account at graas.org.in/account. Reply STOP to stop WhatsApp updates."}
+              disabled={!can}
+            />
+            <span className="text-sm font-normal text-ink2">Sent at most once a day to each person. Leave it empty for no automatic reply. Replying STOP or START always works.</span>
+          </label>
+        </div>
+        <div className="grid gap-3 rounded-xl bg-mist p-4 text-sm">
+          <p className="font-semibold">For the Meta app, WhatsApp, Configuration, Webhook</p>
+          <div className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-center">
+            <span className="text-ink2">Callback URL</span>
+            <span className="readout break-all">{s.wa_webhook_url}</span>
+            <button type="button" className={small} onClick={() => copy(String(s.wa_webhook_url ?? ""), "Callback URL")}>
+              Copy
+            </button>
+            {can && s.wa_verify_token && (
+              <>
+                <span className="text-ink2">Verify token</span>
+                <span className="readout break-all">{s.wa_verify_token}</span>
+                <button type="button" className={small} onClick={() => copy(String(s.wa_verify_token), "Verify token")}>
+                  Copy
+                </button>
+              </>
+            )}
+          </div>
+          <p className="text-ink2">
+            {s.wa_last_webhook ? `Meta last reached the website on ${shortDate(s.wa_last_webhook)}, ${new Date(s.wa_last_webhook).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}.` : "Meta has not reached the website yet."}{" "}
+            {s.has_wa_app_secret ? "The app secret is saved, so delivery reports and replies are accepted." : "Delivery reports and replies are refused until the app secret is saved."}
+          </p>
         </div>
         <label className="flex items-center gap-2.5 font-semibold">
           <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={waOn} onChange={(x) => setWaOn(x.target.checked)} disabled={!can} />
@@ -357,7 +423,7 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
         </label>
         {can && (
           <>
-            <PinInput hint="Needed only when you paste or remove the WhatsApp token." />
+            <PinInput hint="Needed only when you paste or remove the WhatsApp token or the app secret." />
             <PinNote status={pin} onReset={() => setResetPin(true)} />
           </>
         )}
@@ -391,15 +457,32 @@ function Settings({ s, reload }: { s: any; reload: () => void }) {
             )}
           </div>
         )}
+        {can && s.has_wa_token && w.phone_number_id && (
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-line p-4">
+            <label className={`${lbl} w-56`}>
+              Two-step PIN for the number
+              <input className="field readout" inputMode="numeric" maxLength={6} value={regPin} onChange={(x) => setRegPin(x.target.value.replace(/\D/g, ""))} placeholder="6 digits you choose" autoComplete="off" />
+            </label>
+            <button type="button" className="btn btn-quiet !min-h-11" onClick={registerNumber} disabled={busy || regPin.length !== 6}>
+              Register the number
+            </button>
+            <button type="button" className="btn btn-quiet !min-h-11" onClick={updateProfile} disabled={busy}>
+              Update the WhatsApp profile
+            </button>
+            <span className="w-full text-sm text-ink2">Register once, after the number is verified in Meta. The PIN goes straight to Meta and is not kept on this website. The profile adds the about line, description, email and website people see when they tap GRAAS.</span>
+          </div>
+        )}
         {sync?.phone && (
           <div className="rounded-xl bg-cobalt-soft p-4 text-sm">
             {sync.phone.error ? (
               <p className="font-semibold text-[#8f1a11]">Number check: {sync.phone.error}</p>
             ) : (
               <p>
-                <strong>{sync.phone.verified_name ?? "Name not set"}</strong>, {sync.phone.display_phone_number}. Name review: {String(sync.phone.name_status ?? "unknown").toLowerCase().replace(/_/g, " ")}. Quality: {String(sync.phone.quality_rating ?? "unknown").toLowerCase()}. Daily limit: {String(sync.phone.messaging_limit_tier ?? "not set").replace("TIER_", "").toLowerCase()}.
+                <strong>{sync.phone.verified_name ?? "Name not set"}</strong>, {sync.phone.display_phone_number}. {sync.phone.registered ? "Registered for sending." : "Not registered yet: use Register the number."} Name review: {String(sync.phone.name_status ?? "unknown").toLowerCase().replace(/_/g, " ")}. Quality: {String(sync.phone.quality_rating ?? "unknown").toLowerCase()}. Daily limit:{" "}
+                {sync.phone.limit ? String(sync.phone.limit).replace("TIER_", "").replace("UNLIMITED", "no limit").toLowerCase() + " people" : "not shown yet"}.
               </p>
             )}
+            {sync.linked === false && <p className="mt-1 font-semibold text-[#8f1a11]">The app could not be linked to the WhatsApp account, so delivery reports will not arrive: {sync.link_error}</p>}
           </div>
         )}
         {sync?.statuses && (
@@ -632,7 +715,7 @@ function Log() {
   const [msg, setMsg] = useState<{ tone: Tone; text: string } | null>(null);
 
   const load = useCallback(async () => {
-    let query = sb().from("messages").select("id,created_at,event,channel,to_addr,status,attempts,subject,error,sent_at,user_id").order("created_at", { ascending: false }).limit(400);
+    let query = sb().from("messages").select("id,created_at,event,channel,to_addr,status,attempts,subject,error,sent_at,user_id,delivery").order("created_at", { ascending: false }).limit(400);
     if (status) query = query.eq("status", status);
     if (channel) query = query.eq("channel", channel);
     const { data } = await query;
@@ -706,6 +789,7 @@ function Log() {
               </span>
               <span className="flex items-center gap-2">
                 <Badge tone={STATUS_TONE[r.status] ?? "plain"}>{STATUS_TEXT[r.status] ?? r.status}</Badge>
+                {r.channel === "whatsapp" && (r.delivery === "delivered" || r.delivery === "read") && <Badge tone="good">{r.delivery === "read" ? "Read" : "Delivered"}</Badge>}
                 {(r.status === "failed" || r.status === "skipped") && !String(r.event).startsWith("code_") && r.event !== "test" && (
                   <button type="button" className={small} onClick={() => retry(r.id)}>
                     Send again
@@ -715,6 +799,130 @@ function Log() {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------------------- */
+/* WhatsApp inbox                                                                                                  */
+/* ------------------------------------------------------------------------------------------------------------- */
+const when = (d: string) => `${shortDate(d)}, ${new Date(d).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}`;
+const WA_OUT: Record<string, string> = { sent: "Sent", delivered: "Delivered", read: "Read", failed: "Not delivered" };
+
+function Inbox({ onRead }: { onRead: () => void }) {
+  const [threads, setThreads] = useState<any[] | null>(null);
+  const [open, setOpen] = useState("");
+  const [msgs, setMsgs] = useState<any[] | null>(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ tone: Tone; text: string } | null>(null);
+  const loadThreads = useCallback(async () => {
+    const { data } = await sb().rpc("staff_wa_threads");
+    setThreads(data ?? []);
+  }, []);
+  const loadThread = useCallback(
+    async (wa: string) => {
+      const { data } = await sb().rpc("staff_wa_thread", { p_wa: wa });
+      setMsgs(data ?? []);
+      onRead();
+    },
+    [onRead],
+  );
+  async function reply(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    const r = await waAdmin("wa_reply", { wa_id: open, text });
+    setBusy(false);
+    if (!r.ok) return setMsg({ tone: "bad", text: r.error ?? "The reply was not sent." });
+    setText("");
+    loadThread(open);
+    loadThreads();
+  }
+  useEffect(() => {
+    loadThreads();
+    const t = setInterval(loadThreads, 30000);
+    return () => clearInterval(t);
+  }, [loadThreads]);
+  useEffect(() => {
+    if (!open) return;
+    loadThread(open);
+    const t = setInterval(() => loadThread(open), 20000);
+    return () => clearInterval(t);
+  }, [open, loadThread]);
+  const t = (threads ?? []).find((x) => x.wa_id === open);
+  return (
+    <div className="grid gap-4">
+      <p className="text-sm text-ink2">Messages people send to the GRAAS WhatsApp number. You can reply with any text within 24 hours of their last message; after that WhatsApp allows only approved templates, so email them instead. Each number gets 1,000 free replies a month, then about ₹0.12 each.</p>
+      {msg && <Msg tone={msg.tone}>{msg.text}</Msg>}
+      {threads === null ? (
+        <p className="text-ink2">Loading…</p>
+      ) : threads.length === 0 ? (
+        <p className="plate p-5 text-ink2">No WhatsApp messages yet. They appear here once the number is live and someone writes to it.</p>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <ul className="plate max-h-[70vh] divide-y divide-line overflow-y-auto">
+            {threads.map((x) => (
+              <li key={x.wa_id}>
+                <button type="button" onClick={() => setOpen(x.wa_id)} className={`grid w-full gap-0.5 px-4 py-3 text-left ${open === x.wa_id ? "bg-go-soft" : "hover:bg-mist"}`}>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold">{x.member?.name || x.name || `+${x.wa_id}`}</span>
+                    {x.unread > 0 && <Badge tone="good">{x.unread} new</Badge>}
+                  </span>
+                  <span className="truncate text-sm text-ink2">{x.last_body}</span>
+                  <span className="text-xs text-slate5">
+                    {when(x.last_at)}
+                    {x.member?.member_no ? ` · ${x.member.member_no}` : x.member ? " · has an account" : " · no GRAAS account found"}
+                    {x.opted_out ? " · stopped updates" : ""}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="plate grid min-h-[24rem] grid-rows-[auto_minmax(0,1fr)_auto]">
+            {open && t ? (
+              <>
+                <div className="border-b border-line px-5 py-3">
+                  <p className="font-semibold">{t.member?.name || t.name || "Unknown name"}</p>
+                  <p className="text-sm text-ink2">
+                    +{t.wa_id}
+                    {t.member?.email ? ` · ${t.member.email}` : ""}
+                    {t.member?.member_no ? ` · ${t.member.member_no}` : ""}
+                  </p>
+                </div>
+                <div className="grid max-h-[55vh] content-start gap-2 overflow-y-auto bg-mist px-4 py-4">
+                  {(msgs ?? []).map((m) => (
+                    <div key={m.id} className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-[0.95rem] ${m.direction === "in" ? "justify-self-start bg-white" : "justify-self-end bg-go-soft"}`}>
+                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                      <p className="mt-1 text-xs text-ink2">
+                        {when(m.created_at)}
+                        {m.direction === "out" && ` · ${m.auto ? "Automatic reply" : (m.sent_by ?? "GRAAS")} · ${WA_OUT[m.status] ?? m.status ?? ""}`}
+                      </p>
+                      {m.error && <p className="text-xs text-[#8f1a11]">{m.error}</p>}
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={reply} className="grid gap-2 border-t border-line p-4">
+                  {t.window_open ? (
+                    <>
+                      <textarea className="field" rows={3} maxLength={4096} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a reply" />
+                      <button className="btn btn-go justify-self-end !min-h-10 !py-2" disabled={busy || !text.trim()}>
+                        Send on WhatsApp
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-ink2">
+                      More than 24 hours have passed since their last message, so WhatsApp does not allow a free reply. {t.member?.email ? `Email them at ${t.member.email}, or wait for them to write again.` : "Wait for them to write again."}
+                    </p>
+                  )}
+                </form>
+              </>
+            ) : (
+              <p className="row-span-3 self-center p-6 text-center text-ink2">Choose a chat on the left.</p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -736,6 +944,7 @@ export function Messages({ role }: { role: string }) {
       <div role="tablist" aria-label="Messages" className="flex gap-1 overflow-x-auto rounded-full bg-white p-1 shadow-[var(--shadow-card)] sm:inline-flex sm:justify-self-start">
         {[
           ["settings", "Email and WhatsApp"],
+          ["inbox", s?.wa_unread ? `WhatsApp inbox (${s.wa_unread})` : "WhatsApp inbox"],
           ["wording", "Messages and wording"],
           ["log", "Sent messages"],
         ].map(([id, label]) => (
@@ -745,6 +954,7 @@ export function Messages({ role }: { role: string }) {
         ))}
       </div>
       {view === "settings" && (s ? <Settings key={JSON.stringify(s)} s={s} reload={load} /> : <p className="text-ink2">Loading…</p>)}
+      {view === "inbox" && <Inbox onRead={load} />}
       {view === "wording" && <Wording canEdit={canWord} />}
       {view === "log" && <Log />}
     </div>

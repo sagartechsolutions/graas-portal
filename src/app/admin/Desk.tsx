@@ -12,10 +12,19 @@ import { Badge, Msg, Stat, type Tone, lbl, refreshSite, sb, small } from "./shar
 
 export function Dashboard({ go }: { go: (tab: string) => void }) {
   const [d, setD] = useState<any>(null);
+  const [extra, setExtra] = useState<{ docs: number; experts: number; sessions: number; opps: number }>({ docs: 0, experts: 0, sessions: 0, opps: 0 });
   useEffect(() => {
     sb()
       .rpc("staff_dashboard")
       .then(({ data }) => setD(data));
+    // Platform queues the dashboard function does not count yet. Each count is visible only to the roles that can act on it.
+    const n = async (q: PromiseLike<{ count: number | null }>) => (await q).count ?? 0;
+    Promise.all([
+      n(sb().from("member_documents").select("id", { count: "exact", head: true }).eq("verify_status", "requested")),
+      n(sb().from("experts").select("user_id", { count: "exact", head: true }).eq("status", "pending")),
+      n(sb().from("events").select("id", { count: "exact", head: true }).eq("status", "pending")),
+      n(sb().from("opportunities").select("id", { count: "exact", head: true }).eq("status", "pending")),
+    ]).then(([docs, experts, sessions, opps]) => setExtra({ docs, experts, sessions, opps }));
   }, []);
   if (!d) return <p className="text-ink2">Loading…</p>;
   const g = d.gateway ?? {};
@@ -36,6 +45,10 @@ export function Dashboard({ go }: { go: (tab: string) => void }) {
     [d.needs_review, "payments to check", "payments"],
     [d.open_tickets, "help requests to answer", "helpdesk"],
     [d.enquiries_new, "new enquiries", "leads"],
+    [extra.docs, "certificates to verify", "documents"],
+    [extra.experts, "requests to host sessions", "events"],
+    [extra.sessions, "sessions and events to approve", "events"],
+    [extra.opps, "opportunity posts to approve", "opportunities"],
   ];
   return (
     <div className="grid gap-6">

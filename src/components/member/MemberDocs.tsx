@@ -206,7 +206,7 @@ function useDoc({ a }: DocProps) {
   const origin = typeof window === "undefined" ? "https://graas.org.in" : window.location.origin;
   const photo = usePhoto(p.id, p.photo_updated_at);
   const typeName = m.plan.code === "school-student" ? "School Student Member" : (TYPE_NAME[audience] ?? `${m.plan.name} Member`);
-  return { m, p, audience, isOrg, title, rows, photo, url: `${origin}/verify?id=${m.member_no}`, typeName };
+  return { m, p, audience, isOrg, title, rows, photo, url: `${origin}/m/${m.member_no}`, typeName };
 }
 
 /* ---------- Member ID card (85.6 x 54 mm, landscape) ---------- */
@@ -504,7 +504,7 @@ export function Certificate(props: DocProps) {
 export function ChapterCertificate({ c }: { c: any }) {
   const f = certFrame();
   const origin = typeof window === "undefined" ? "https://graas.org.in" : window.location.origin;
-  const url = `${origin}/verify?id=${c.code}`;
+  const url = `${origin}/m/${c.code}`;
   const branch = c.kind === "college" ? (c.branch === "Other" ? c.branch_other : c.branch) : null;
   const typeName = c.kind === "school" ? "School Chapter" : "College Chapter";
   const k = { fontSize: mu(2.35), color: "#5a616b" } as const;
@@ -769,7 +769,7 @@ export function PledgeCertificate(props: DocProps & { pledge: { title: string; i
 export function ParticipationCertificate({ name, memberNo, e, regId, photo }: { name: string; memberNo?: string | null; e: any; regId: string; photo?: { id: string; stamp: string | null } }) {
   const f = certFrame();
   const origin = typeof window === "undefined" ? "https://graas.org.in" : window.location.origin;
-  const url = memberNo ? `${origin}/verify?id=${memberNo}` : `${origin}/events/${String(e.ref).toLowerCase()}`;
+  const url = memberNo ? `${origin}/m/${memberNo}` : `${origin}/events/${String(e.ref).toLowerCase()}`;
   const k = { fontSize: mu(2.35), color: "#5a616b" } as const;
   const day = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" }).format(new Date(e.starts_at));
   const certNo = `GRAAS-PC-${regId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;

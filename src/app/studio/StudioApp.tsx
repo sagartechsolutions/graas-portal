@@ -17,7 +17,7 @@ import { inr } from "@/lib/money";
 const sb = () => browserClient();
 const lbl = "grid gap-1.5 font-medium";
 
-function ExpertFields({ f, set, bad }: { f: any; set: (k: string, v: any) => void; bad: (k: string) => object }) {
+export function ExpertFields({ f, set, bad }: { f: any; set: (k: string, v: any) => void; bad: (k: string) => object }) {
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">

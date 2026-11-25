@@ -460,3 +460,16 @@ input[type="range"].jog::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .flow, .spin-slow, .node-pop, .fan-card, .sheen::after, .rail-fill { animation: none !important; }
 }
+
+/* Multi-page resume: the pages are copied into .print-root (a direct child of body). While the resume is open,
+   printing sends only those pages, one A4 sheet each, instead of the fixed single-sheet print area. */
+.print-root { display: none; }
+@media print {
+  html.print-flow body > *:not(.print-root) { display: none !important; }
+  html.print-flow body > .print-root { display: block !important; height: auto !important; overflow: visible !important; width: 210mm; }
+  html.print-flow .print-root, html.print-flow .print-root * { visibility: visible !important; }
+  html.print-flow .print-root { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html.print-flow .resume-print-page { width: 210mm; break-after: page; page-break-after: always; }
+  html.print-flow .resume-print-page:last-child { break-after: auto; page-break-after: auto; }
+  html.print-flow .resume-print-page .cert-sheet { width: 210mm !important; height: 297mm !important; }
+}

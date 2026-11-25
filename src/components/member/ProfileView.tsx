@@ -67,7 +67,7 @@ export default function ProfileView({ p, mp, plan, showContact = false, note }: 
     <article className="card overflow-hidden">
       <div className="h-20 bg-[linear-gradient(110deg,#000e21_0%,#0b2440_60%,#067a2e_140%)]" aria-hidden="true" />
       <div className="px-6 pb-6 sm:px-8 sm:pb-8">
-        <div className="-mt-12 flex flex-wrap items-end gap-4">
+        <div className="-mt-12 flex flex-wrap items-end justify-between gap-4">
           <div className={`h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-mist shadow-[var(--shadow-card)] ${org ? "bg-white" : ""}`}>
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -76,16 +76,16 @@ export default function ProfileView({ p, mp, plan, showContact = false, note }: 
               <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-slate5">{initials(name ?? "")}</span>
             )}
           </div>
-          <div className="min-w-0 flex-1 pb-1">
-            <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
-            {!org && mp.headline && <p className="mt-0.5 font-medium text-ink">{mp.headline}</p>}
-            {sub && <p className="mt-0.5 text-sm text-ink2">{sub}</p>}
-          </div>
           {plan?.name && (
             <span className="mb-1 inline-flex items-center gap-2 rounded-full bg-go-soft px-3 py-1 text-sm font-semibold text-go-deep">
               <span className="dot" aria-hidden="true" /> GRAAS {plan.code === "school-student" ? "School Student" : plan.name} member
             </span>
           )}
+        </div>
+        <div className="mt-3 min-w-0">
+          <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
+          {!org && mp.headline && <p className="mt-0.5 font-medium text-ink">{mp.headline}</p>}
+          {sub && <p className="mt-0.5 text-sm text-ink2">{sub}</p>}
         </div>
 
         {note && <div className="mt-4">{note}</div>}

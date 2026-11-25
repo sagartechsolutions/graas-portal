@@ -136,7 +136,17 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
           <h4 className="font-semibold">Membership</h4>
           <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 text-[0.95rem]">
             {item("Plan", row.plan?.name)}
-            {item("Member number", <span className="readout">{row.member_no}</span>)}
+            {item(
+              "Member number",
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="readout">{row.member_no}</span>
+                {row.member_no && (
+                  <a className="text-sm font-semibold underline" href={`/m/${row.member_no}`} target="_blank" rel="noreferrer">
+                    GRAAS page
+                  </a>
+                )}
+              </span>,
+            )}
             {item("Applied", shortDate(row.applied_at))}
             {item("Verified", shortDate(row.approved_at))}
             {item("Active from", shortDate(row.starts_on))}

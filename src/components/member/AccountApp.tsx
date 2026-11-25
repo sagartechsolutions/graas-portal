@@ -15,6 +15,9 @@ import CareerProfile from "./CareerProfile";
 import { Certificate, IdCards, PledgeCertificate } from "./MemberDocs";
 import { PledgeBox, TakePledge, usePledge } from "./Pledge";
 import Resume from "./Resume";
+import Documents from "./Documents";
+import HostSession from "./HostSession";
+import ProfileHome from "./ProfileHome";
 import MemberOpps from "@/components/opps/MemberOpps";
 import OrgOpps from "@/components/opps/OrgOpps";
 import MemberEvents from "@/components/events/MemberEvents";
@@ -1339,13 +1342,13 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   const params = useSearchParams();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [a, setA] = useState<Account | null>(null);
-  const [tab, setTab] = useState(params.get("tab") ?? "overview");
+  const [tab, setTab] = useState(params.get("tab") ?? "");
   const [flash, setFlash] = useState(params.get("welcome") ? "Your account is ready and your application is saved." : "");
   const [org, setOrg] = useState<any>(null);
   const [receipt, setReceipt] = useState<any>(null);
 
   useEffect(() => {
-    const go = (e: Event) => setTab(String((e as CustomEvent).detail ?? "overview"));
+    const go = (e: Event) => setTab(String((e as CustomEvent).detail ?? ""));
     window.addEventListener("graas-tab", go);
     return () => window.removeEventListener("graas-tab", go);
   }, []);
@@ -1402,68 +1405,126 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   const needEmail = !!a.channels?.email && !a.profile.email_verified_at;
   const needPhone = !!a.channels?.whatsapp && !!a.profile.phone && !a.profile.phone_verified_at;
   const orgMember = !!m && !isIndividual(m.plan?.audience);
-  const tabs = [
-    { id: "overview", label: "Overview", show: true },
-    { id: "career", label: orgMember ? "Company page" : "Profile", show: !!m },
-    { id: "resume", label: "Resume", show: !!m && !orgMember },
-    { id: "opportunities", label: "Opportunities", show: !!m },
-    { id: "events", label: "Events", show: true },
-    { id: "certificates", label: "Certificates", show: hasId },
-    { id: "payments", label: "Payments", show: true },
-    { id: "profile", label: "Account", show: true },
-    { id: "help", label: "Help", show: true },
-  ].filter((t) => t.show);
+  const school = m?.plan?.code === "school-student";
+  const groups = [
+    {
+      title: "My GRAAS",
+      items: [
+        { id: "home", label: orgMember ? "Our page" : "My profile", show: hasId },
+        { id: "overview", label: "Membership", show: true },
+        { id: "certificates", label: "ID and certificates", show: hasId },
+      ],
+    },
+    {
+      title: orgMember ? "Hiring" : "Career",
+      items: [
+        { id: "career", label: orgMember ? "Company page" : "Career profile", show: !!m },
+        { id: "resume", label: "Resume", show: !!m && !orgMember },
+        { id: "documents", label: "Documents", show: !!m },
+        { id: "opportunities", label: "Opportunities", show: !!m },
+      ],
+    },
+    {
+      title: "Learn and share",
+      items: [
+        { id: "events", label: "Events", show: true },
+        { id: "host", label: "Host a session", show: !!m && !school },
+      ],
+    },
+    {
+      title: "Settings",
+      items: [
+        { id: "payments", label: "Payments", show: true },
+        { id: "profile", label: "Account", show: true },
+        { id: "help", label: "Help", show: true },
+      ],
+    },
+  ]
+    .map((g) => ({ ...g, items: g.items.filter((t) => t.show) }))
+    .filter((g) => g.items.length);
+  const all = groups.flatMap((g) => g.items);
+  // Paid members land on their profile; everyone else on their membership status.
+  const current = all.some((t) => t.id === tab) ? tab : hasId && state === "active" ? "home" : "overview";
+  const label = all.find((t) => t.id === current)?.label ?? "";
+  const open = (id: string) => {
+    setTab(id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <section className="min-h-[70vh] bg-mist">
-      <div className="shell py-8 lg:py-9">
-        <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
-          <div>
-            <p className="text-sm text-ink2">My account</p>
-            <h1 className="h-section !text-[clamp(1.8rem,1.3rem+2vw,2.8rem)]">{a.profile.full_name ?? a.profile.email}</h1>
+      <div className="shell grid gap-6 py-6 lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:py-8">
+        <aside className="print:hidden">
+          <div className="grid gap-4 lg:sticky lg:top-24">
+            <MiniCard a={a} state={state} onOpen={() => open(hasId ? "home" : "overview")} />
+            <nav aria-label="Account sections" className="hidden gap-4 lg:grid">
+              {groups.map((g) => (
+                <div key={g.title}>
+                  <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate7">{g.title}</p>
+                  <ul className="mt-1 grid gap-0.5">
+                    {g.items.map((t) => (
+                      <li key={t.id}>
+                        <button type="button" aria-current={current === t.id ? "page" : undefined} onClick={() => open(t.id)} className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[0.95rem] font-medium transition-colors ${current === t.id ? "bg-ink text-white" : "hover:bg-white"}`}>
+                          {t.label}
+                          {t.id === "host" && current !== "host" && <span className="rounded-full bg-go-soft px-2 py-0.5 text-[0.7rem] font-semibold text-go-deep">New</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <div className="grid gap-2 border-t border-line pt-4">
+                {a.my_chapter && (
+                  <Link href="/chapter" className="btn btn-ghost !min-h-10">
+                    Chapter console
+                  </Link>
+                )}
+                <button type="button" className="btn btn-ghost !min-h-10" onClick={() => sb().auth.signOut()}>
+                  Sign out
+                </button>
+              </div>
+            </nav>
+            <div role="tablist" aria-label="Account sections" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:hidden">
+              {all.map((t) => (
+                <button key={t.id} role="tab" type="button" aria-selected={current === t.id} onClick={() => open(t.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-[0.95rem] font-semibold shadow-[var(--shadow-card)] transition-colors ${current === t.id ? "bg-ink text-white" : "bg-white text-ink2 hover:text-ink"}`}>
+                  {t.label}
+                </button>
+              ))}
+              <button type="button" className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-[0.95rem] font-semibold text-ink2 shadow-[var(--shadow-card)]" onClick={() => sb().auth.signOut()}>
+                Sign out
+              </button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {a.my_chapter && (
-              <Link href="/chapter" className="btn btn-ghost !min-h-11">
-                Chapter console
-              </Link>
-            )}
-            <button type="button" className="btn btn-ghost !min-h-11" onClick={() => sb().auth.signOut()}>
-              Sign out
-            </button>
-          </div>
-        </div>
-        <div role="tablist" aria-label="Account sections" className="mt-6 flex gap-1 overflow-x-auto rounded-full bg-white p-1 shadow-[var(--shadow-card)] print:hidden sm:inline-flex">
-          {tabs.map((t) => (
-            <button key={t.id} role="tab" type="button" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-[0.95rem] font-semibold transition-colors ${tab === t.id ? "bg-ink text-white" : "text-ink2 hover:text-ink"}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+        </aside>
+        <div className="min-w-0">
+        {current === "home" ? <h1 className="sr-only">{label}</h1> : <h1 className="h-section mb-5 !text-[clamp(1.7rem,1.3rem+1.4vw,2.4rem)] print:hidden">{label}</h1>}
         {flash && (
-          <div className="mt-5 print:hidden" role="status">
+          <div className="mb-5 print:hidden" role="status">
             <Notice tone="good">{flash}</Notice>
           </div>
         )}
-        <div className="mt-6">
-          {tab === "overview" && (needEmail || needPhone) && (
+        <div>
+          {(current === "overview" || current === "home") && (needEmail || needPhone) && (
             <div id="confirm-contact" className="mb-5 grid gap-5 lg:grid-cols-2 print:hidden">
               {needEmail && <VerifyCard kind="email" target={a.profile.email} required={a.channels?.email_required} onDone={() => reload("Your email is confirmed.")} />}
               {needPhone && <VerifyCard kind="phone" target={`+91 ${a.profile.phone}`} required={a.channels?.phone_required} onDone={() => reload("Your WhatsApp number is confirmed. Account updates will come there too.")} />}
             </div>
           )}
-          {tab === "overview" && m && !a.profile.pledged_at && (
-            <div className="mb-5 print:hidden">
+          {(current === "overview" || current === "home") && m && !a.profile.pledged_at && (
+            <div id="take-pledge" className="mb-5 print:hidden">
               <TakePledge name={a.profile.full_name ?? ""} onDone={(msg) => reload(msg)} />
             </div>
           )}
-          {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
-          {tab === "career" && m && <CareerProfile a={a} goDetails={() => setTab("profile")} />}
-          {tab === "resume" && m && <Resume a={a} />}
-          {tab === "events" && <MemberEvents a={a} />}
-          {tab === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => setTab("career")} />)}
-          {tab === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={setTab} />}
-          {tab === "payments" &&
+          {current === "home" && <ProfileHome a={a} state={state} go={open} />}
+          {current === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
+          {current === "career" && m && <CareerProfile a={a} goDetails={() => open("profile")} />}
+          {current === "resume" && m && <Resume a={a} goDocuments={() => open("documents")} />}
+          {current === "documents" && m && <Documents a={a} goPublic={() => open(hasId ? "home" : "overview")} />}
+          {current === "events" && <MemberEvents a={a} />}
+          {current === "host" && m && <HostSession a={a} school={school} />}
+          {current === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => open("career")} />)}
+          {current === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={open} />}
+          {current === "payments" &&
             (receipt ? (
               <div className="grid gap-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -1504,10 +1565,38 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
                 </ul>
               </div>
             ))}
-          {tab === "profile" && <Profile a={a} reload={reload} />}
-          {tab === "help" && <Help a={a} reload={reload} />}
+          {current === "profile" && <Profile a={a} reload={reload} />}
+          {current === "help" && <Help a={a} reload={reload} />}
+        </div>
         </div>
       </div>
     </section>
+  );
+}
+
+/* Small card at the top of the account menu: photo, name, member number and status. */
+function MiniCard({ a, state, onOpen }: { a: Account; state: string; onOpen: () => void }) {
+  const p = a.profile,
+    m = a.membership;
+  const org = !!m && !isIndividual(m.plan?.audience);
+  const photo = usePhoto(p.id, p.photo_updated_at);
+  const name = org ? p.organisation || p.full_name : p.full_name;
+  const tone = state === "active" ? "bg-go-soft text-go-deep" : state === "expired" || state === "suspended" ? "bg-[#fff1ef] text-[#8f1a11]" : "bg-[#fff6e5] text-[#7a4b00]";
+  return (
+    <button type="button" onClick={onOpen} className="card card-lift flex items-center gap-3 p-3 text-left lg:grid lg:justify-items-start lg:gap-2 lg:p-4">
+      <span className={`h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-mist lg:h-16 lg:w-16 ${org ? "bg-white ring-1 ring-line" : ""}`}>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className={`h-full w-full ${org ? "object-contain p-1" : "object-cover"}`} />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate5">{initials(name ?? "")}</span>
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">{name ?? p.email}</span>
+        {m?.member_no ? <span className="readout block truncate text-xs text-ink2">{m.member_no}</span> : <span className="block truncate text-xs text-ink2">{p.email}</span>}
+        <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${tone}`}>{m ? (STATUS_LABEL[state] ?? state) : "No membership yet"}</span>
+      </span>
+    </button>
   );
 }

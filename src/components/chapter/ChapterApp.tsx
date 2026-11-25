@@ -9,6 +9,7 @@ import HostEvents from "@/components/events/HostEvents";
 import ChangePassword from "@/components/member/ChangePassword";
 import { Receipt } from "@/components/member/AccountApp";
 import { ChapterCertificate } from "@/components/member/MemberDocs";
+import Qr from "@/components/member/Qr";
 import { VerifyCard } from "@/components/member/Verify";
 import Icon, { IconTile } from "@/components/ui/Icon";
 import { browserClient, portal } from "@/lib/browser";
@@ -996,6 +997,7 @@ export default function ChapterApp() {
                     </button>
                   ))}
                 </div>
+                {c.code && c.status === "approved" && <ChapterPage code={c.code} />}
                 {d.orders.length > 0 && (
                   <div className="card p-6">
                     <h3 className="h-card">Chapter payments</h3>
@@ -1101,6 +1103,39 @@ function ChapterReceipts({ orders }: { orders: any[] }) {
 }
 
 /** Competitions, workshops, lectures, meetups and visits the chapter announces (GRAAS approves each one). */
+/* The chapter's public GRAAS page (the same page its certificate QR opens), to share with students and the college. */
+function ChapterPage({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = `https://graas.org.in/m/${code}`;
+  return (
+    <div className="card flex flex-wrap items-center gap-5 p-5 sm:p-6">
+      <Qr value={url} size={112} className="rounded-lg ring-1 ring-line" />
+      <div className="min-w-0 flex-1">
+        <h3 className="h-card">Your chapter&apos;s GRAAS page</h3>
+        <p className="mt-1 text-sm text-ink2">Shows that the chapter is approved and active, how many members it has, and its events. Put the QR on notice boards and posters, or share the link in student groups.</p>
+        <p className="readout mt-2 break-all text-sm font-medium">graas.org.in/m/{code}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn btn-ghost !min-h-10"
+          onClick={() =>
+            navigator.clipboard?.writeText(url).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            })
+          }
+        >
+          {copied ? "Link copied" : "Copy link"}
+        </button>
+        <a href={url} target="_blank" rel="noreferrer" className="btn btn-primary !min-h-10">
+          Open the page
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function ChapterEvents() {
   const [list, setList] = useState<any[] | null>(null);
   const load = useCallback(async () => {

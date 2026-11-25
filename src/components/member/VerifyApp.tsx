@@ -83,7 +83,12 @@ export default function VerifyApp() {
                   <dd className="font-medium">{res.valid_until ? shortDate(res.valid_until) : "No end date"}</dd>
                 </div>
               </dl>
-              <p className="border-t border-line px-6 py-4 text-sm text-ink2">{t.text} Checked against GRAAS records just now.</p>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-6 py-4">
+                <p className="text-sm text-ink2">{t.text} Checked against GRAAS records just now.</p>
+                <a href={`/m/${res.member_no}`} className="btn btn-ghost !min-h-10">
+                  Open the full record
+                </a>
+              </div>
             </div>
           )}
         </div>

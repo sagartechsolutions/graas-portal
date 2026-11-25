@@ -15,6 +15,7 @@ import { Coupons, Gateway, Payments } from "./Money";
 import { MyLogin, PledgeEditor } from "./Platform";
 import { Opportunities } from "./Opportunities";
 import { Events } from "./Events";
+import { Documents } from "./Documents";
 
 type PlanRow = {
   id: string;
@@ -554,7 +555,7 @@ function Settings({ session }: { session: Session }) {
 
 const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Overview", items: [["dashboard", "Dashboard"]] },
-  { title: "Membership", items: [["members", "Members"], ["chapters", "Chapters"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
+  { title: "Membership", items: [["members", "Members"], ["documents", "Documents and checks"], ["chapters", "Chapters"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
   { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"], ["pledge", "Member pledge"]] },
   { title: "Platform", items: [["events", "Events and experts"], ["opportunities", "Opportunities"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
@@ -568,6 +569,10 @@ export default function AdminApp() {
   const [tab, setTab] = useState("dashboard");
   const [prefill, setPrefill] = useState<{ subject: string; body: string } | null>(null);
 
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t && /^[a-z_]{2,30}$/.test(t)) setTab(t);
+  }, []);
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = sb().auth.onAuthStateChange((_e, s) => setSession(s));
@@ -606,6 +611,7 @@ export default function AdminApp() {
   const allowed: Record<string, boolean> = {
     dashboard: true,
     members: true,
+    documents: is("membership_desk"),
     changes: is("membership_desk", "finance"),
     chapters: is("chapter_manager", "membership_desk"),
     payments: is("finance", "membership_desk", "support"),
@@ -685,6 +691,7 @@ export default function AdminApp() {
         <div className="min-w-0">
           {current === "dashboard" && <Dashboard go={setTab} />}
           {current === "members" && <Members role={role} />}
+          {current === "documents" && <Documents />}
           {current === "changes" && <Changes role={role} />}
           {current === "chapters" && <Chapters />}
           {current === "payments" && <Payments role={role} />}
