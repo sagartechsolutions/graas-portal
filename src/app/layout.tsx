@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "@fontsource-variable/ibm-plex-sans";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
@@ -29,8 +30,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
-        <ScrollReset />
-        <Header />
+        {/* Both read the page address. Inside Suspense, pages built on request (an event, opportunity, policy or
+            QR page opened for the first time) stream the header in instead of failing. */}
+        <Suspense fallback={null}>
+          <ScrollReset />
+        </Suspense>
+        <Suspense fallback={<div className="sticky top-0 z-50 h-[4.25rem] border-b border-line bg-white/90" aria-hidden="true" />}>
+          <Header />
+        </Suspense>
         <main id="main" className="flex-1">
           {children}
         </main>
