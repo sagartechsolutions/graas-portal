@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Receipt } from "@/components/member/AccountApp";
 import { ChapterCertificate } from "@/components/member/MemberDocs";
 import { VerifyCard } from "@/components/member/Verify";
 import Icon, { IconTile } from "@/components/ui/Icon";
@@ -839,9 +840,6 @@ export default function ChapterApp() {
         )}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Link href="/account" className="btn btn-ghost !min-h-11">
-          My account
-        </Link>
         <button type="button" className="btn btn-ghost !min-h-11" onClick={() => sb().auth.signOut().then(() => router.push("/"))}>
           Sign out
         </button>
@@ -997,7 +995,7 @@ export default function ChapterApp() {
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-3 text-sm text-ink2">Printable receipts are in My account, under Payments.</p>
+                    <ChapterReceipts orders={d.orders} />
                   </div>
                 )}
               </div>
@@ -1050,5 +1048,38 @@ export default function ChapterApp() {
         )}
       </div>
     </section>
+  );
+}
+
+/** Printable receipts for chapter seat payments, kept in the console because a chapter login has no member area. */
+function ChapterReceipts({ orders }: { orders: any[] }) {
+  const [open, setOpen] = useState<any>(null);
+  const [org, setOrg] = useState<any>(null);
+  useEffect(() => {
+    browserClient()
+      .from("site_settings")
+      .select("value")
+      .eq("key", "org")
+      .maybeSingle()
+      .then(({ data }) => setOrg(data?.value ?? null));
+  }, []);
+  const paid = orders.filter((o) => o.receipt_no);
+  if (!paid.length) return null;
+  return (
+    <div className="mt-4 grid gap-3">
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {paid.map((o) => (
+          <button key={o.id} type="button" className="btn btn-ghost !min-h-10" onClick={() => setOpen(open?.id === o.id ? null : o)}>
+            {open?.id === o.id ? "Close receipt" : `Receipt ${o.receipt_no}`}
+          </button>
+        ))}
+        {open && (
+          <button type="button" className="btn btn-primary !min-h-10" onClick={() => window.print()}>
+            Print or save as PDF
+          </button>
+        )}
+      </div>
+      {open && <Receipt o={{ ...open, chapter_id: open.chapter_id ?? true }} org={org} />}
+    </div>
   );
 }

@@ -625,3 +625,141 @@ export function ChapterCertificate({ c }: { c: any }) {
     </div>
   );
 }
+
+/* ---------- Pledge certificate (A4 portrait): pledge completion and membership confirmation ---------- */
+
+const pu = (mm: number) => `${((mm * 100) / 210).toFixed(3)}cqw`;
+let portraitCache: { bands: string; corners: string; bg: string } | null = null;
+function portraitFrame() {
+  if (portraitCache) return portraitCache;
+  portraitCache = {
+    bands: bandD(13, 11.5, 197, 11.5, 2.3, 7, 4) + bandD(13, 285.5, 197, 285.5, 2.3, 7, 4) + bandD(11.5, 13, 11.5, 284, 2.3, 7, 4) + bandD(198.5, 13, 198.5, 284, 2.3, 7, 4),
+    corners: [[11.5, 11.5], [198.5, 11.5], [11.5, 285.5], [198.5, 285.5]].map(([x, y]) => rosetteD(x, y, 3.4, 0.9, 8, 5, 240)).join(""),
+    bg: rosetteD(105, 165, 58, 6, 18, 14) + rosetteD(105, 165, 40, 4, 14, 10),
+  };
+  return portraitCache;
+}
+
+export function PledgeCertificate(props: DocProps & { pledge: { title: string; intro: string; points: string[] } }) {
+  const { m, p, isOrg, title, url, photo, typeName } = useDoc(props);
+  const f = portraitFrame();
+  const pledged = p.pledged_at ? String(p.pledged_at).slice(0, 10) : m.starts_on;
+  const k = { fontSize: pu(2.3), color: "#5a616b" } as const;
+  const an = /^[AEIOU]/i.test(typeName) ? "an" : "a";
+  const pts = props.pledge.points;
+  const fs = pts.join(" ").length > 640 ? 2.95 : 3.25;
+  return (
+    <div className="overflow-x-auto pb-2">
+      <style>{"@media print { @page { size: A4 portrait; margin: 0; } }"}</style>
+      <div className="print-area print-cert-p mx-auto min-w-[560px] max-w-[820px]">
+        <div style={{ containerType: "inline-size" }}>
+          <div className="cert-sheet relative aspect-[210/297] w-full overflow-hidden bg-white text-ink shadow-[var(--shadow-card)] ring-1 ring-line">
+            <svg viewBox="0 0 210 297" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+              <path d={f.bg} fill="none" stroke={INK} strokeWidth="0.12" opacity="0.07" />
+              <rect x="7" y="7" width="196" height="283" fill="none" stroke={INK} strokeWidth="0.6" />
+              <path d={f.bands} fill="none" stroke="#5a616b" strokeWidth="0.22" />
+              <rect x="16" y="16" width="178" height="265" fill="none" stroke={INK} strokeWidth="0.35" />
+              <rect x="17.4" y="17.4" width="175.2" height="262.2" fill="none" stroke="#02ae3e" strokeWidth="0.3" />
+              {[[11.5, 11.5], [198.5, 11.5], [11.5, 285.5], [198.5, 285.5]].map(([x, y]) => (
+                <g key={`${x}-${y}`}>
+                  <circle cx={x} cy={y} r="5" fill="#fff" stroke={INK} strokeWidth="0.35" />
+                  <circle cx={x} cy={y} r="1" fill="#02ae3e" />
+                </g>
+              ))}
+              <path d={f.corners} fill="none" stroke={INK} strokeWidth="0.18" />
+            </svg>
+
+            {/* record, top left */}
+            <div className="absolute bg-white" style={{ left: pu(24), top: pu(24), width: pu(42), border: `${pu(0.3)} solid ${INK}` }}>
+              <div style={{ padding: `${pu(1.4)} ${pu(2)}`, borderBottom: `${pu(0.25)} solid #e2e4e9` }}>
+                <p style={k}>Membership number</p>
+                <p className="readout font-medium" style={{ fontSize: pu(2.85) }}>
+                  {m.member_no}
+                </p>
+              </div>
+              <div style={{ padding: `${pu(1.4)} ${pu(2)}` }}>
+                <p style={k}>Pledge taken</p>
+                <p className="readout font-medium" style={{ fontSize: pu(2.85) }}>
+                  {shortDate(pledged)}
+                </p>
+              </div>
+            </div>
+
+            {/* photo or logo, top right */}
+            <div className="absolute bg-white" style={{ right: pu(24), top: pu(22), width: pu(23), height: pu(28), border: `${pu(0.35)} solid ${INK}`, padding: pu(0.9) }}>
+              <Portrait url={photo} name={title} org={isOrg} style={{ width: "100%", height: "100%", fontSize: pu(8) }} />
+            </div>
+
+            {/* the Society */}
+            <div className="absolute inset-x-0 text-center" style={{ top: pu(25) }}>
+              <Lockup u={pu} scale={1.2} />
+              <div className="flex items-center justify-center" style={{ gap: pu(2), marginTop: pu(3.5) }}>
+                <span style={{ width: pu(18), height: pu(0.25), background: "#b7babf" }} />
+                <span className="rounded-full bg-go" style={{ width: pu(1.6), height: pu(1.6) }} />
+                <span style={{ width: pu(18), height: pu(0.25), background: "#b7babf" }} />
+              </div>
+            </div>
+
+            {/* title and statement */}
+            <div className="absolute inset-x-0 text-center" style={{ top: pu(60), fontFamily: SERIF }}>
+              <h2 className="font-semibold" style={{ fontSize: pu(10.5), letterSpacing: "-0.01em", lineHeight: 1 }}>
+                Certificate of Pledge
+              </h2>
+              <p className="font-medium uppercase text-go-deep" style={{ fontFamily: "var(--font-sans)", fontSize: pu(2.6), letterSpacing: "0.16em", marginTop: pu(3) }}>
+                and membership confirmation
+              </p>
+              <p className="italic text-ink2" style={{ fontSize: pu(4), marginTop: pu(7) }}>
+                This is to certify that
+              </p>
+              <p className="mx-auto font-semibold" style={{ fontSize: pu(title.length > 30 ? 7 : 8.8), marginTop: pu(2.5), lineHeight: 1.05, maxWidth: pu(160) }}>
+                {title}
+              </p>
+              <div className="mx-auto bg-ink" style={{ width: pu(120), height: pu(0.3), marginTop: pu(3) }} />
+              <p className="mx-auto text-ink2" style={{ fontSize: pu(3.7), lineHeight: 1.5, width: pu(160), marginTop: pu(4) }}>
+                {an} <b className="font-semibold text-ink">{typeName}</b> of the Global Robotics And Automation Society, has taken the GRAAS Member Pledge on{" "}
+                <b className="font-semibold text-ink">{shortDate(pledged)}</b>. This certificate confirms the membership, valid {m.ends_on ? <>until <b className="font-semibold text-ink">{shortDate(m.ends_on)}</b></> : "with no end date"}.
+              </p>
+            </div>
+
+            {/* the pledge */}
+            <div className="absolute bg-white" style={{ left: pu(28), right: pu(28), top: pu(136), border: `${pu(0.3)} solid #e2e4e9`, borderTop: `${pu(0.8)} solid #02ae3e`, padding: `${pu(5)} ${pu(7)} ${pu(5.5)}` }}>
+              <p className="font-semibold" style={{ fontFamily: SERIF, fontSize: pu(4.4) }}>
+                {props.pledge.title}
+              </p>
+              <p className="font-medium" style={{ fontSize: pu(3.3), marginTop: pu(1.8) }}>
+                {props.pledge.intro}
+              </p>
+              <ul style={{ marginTop: pu(2.6), display: "grid", gap: pu(1.9) }}>
+                {pts.map((x) => (
+                  <li key={x} className="flex text-ink2" style={{ gap: pu(2.6), fontSize: pu(fs), lineHeight: 1.4 }}>
+                    <span aria-hidden="true" className="shrink-0 rotate-45 bg-go" style={{ width: pu(1.6), height: pu(1.6), marginTop: pu(1.6) }} />
+                    <span>
+                      <b className="font-semibold text-ink">{x.split(" ")[0]}</b> {x.split(" ").slice(1).join(" ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* robot arm, seal, verify */}
+            <RobotArm sw={1.9} style={{ position: "absolute", left: pu(21), bottom: pu(19.5), width: pu(42) }} />
+            <div className="absolute inset-x-0 text-center" style={{ bottom: pu(20) }}>
+              <Seal id={`seal-pledge-${m.id}`} style={{ width: pu(30), height: pu(30), display: "block", margin: "0 auto" }} />
+              <p className="text-slate7" style={{ fontSize: pu(2.2), marginTop: pu(1) }}>
+                Issued digitally by the Global Robotics And Automation Society
+              </p>
+            </div>
+            <div className="absolute flex flex-col items-end" style={{ right: pu(24), bottom: pu(23), gap: pu(1.5) }}>
+              <Qr value={url} size={220} style={{ width: pu(21), height: pu(21), display: "block", border: `${pu(0.25)} solid #e2e4e9` }} />
+              <p className="text-right" style={{ ...k, fontSize: pu(2.1) }}>
+                Scan to verify, or visit
+                <br />
+                graas.org.in/verify
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

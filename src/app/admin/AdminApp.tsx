@@ -12,6 +12,7 @@ import { Members } from "./Members";
 import { ProfileOptionsEditor } from "./Options";
 import { Broadcast, Messages } from "./Messages";
 import { Coupons, Gateway, Payments } from "./Money";
+import { MyLogin, PledgeEditor } from "./Platform";
 
 type PlanRow = {
   id: string;
@@ -552,10 +553,10 @@ function Settings({ session }: { session: Session }) {
 const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Overview", items: [["dashboard", "Dashboard"]] },
   { title: "Membership", items: [["members", "Members"], ["chapters", "Chapters"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
-  { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"]] },
+  { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"], ["pledge", "Member pledge"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
   { title: "Messages", items: [["messages", "Email and WhatsApp"], ["broadcast", "Send an update"]] },
-  { title: "System", items: [["staff", "Staff"], ["settings", "Settings"], ["activity", "Activity log"]] },
+  { title: "System", items: [["staff", "Staff"], ["settings", "Settings"], ["activity", "Activity log"], ["mylogin", "My login"]] },
 ];
 
 export default function AdminApp() {
@@ -586,10 +587,10 @@ export default function AdminApp() {
     return (
       <section className="mx-auto max-w-xl px-5 py-20">
         <h1 className="h-section">No staff access</h1>
-        <p className="lede mt-4">{session.user.email} is signed in but has no staff role. Members use My account instead.</p>
+        <p className="lede mt-4">{session.user.email} is signed in but has no staff role. Admin is only for GRAAS staff logins.</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <a href="/account" className="btn btn-go">
-            Go to My account
+          <a href="/" className="btn btn-go">
+            Go to the website
           </a>
           <button type="button" className="btn btn-quiet" onClick={() => sb().auth.signOut()}>
             Sign out
@@ -618,6 +619,8 @@ export default function AdminApp() {
     staff: role === "super_admin",
     settings: role === "super_admin",
     activity: role === "super_admin",
+    pledge: role === "super_admin",
+    mylogin: true,
   };
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([id]) => allowed[id]) })).filter((g) => g.items.length);
   const current = allowed[tab] ? tab : "dashboard";
@@ -633,9 +636,9 @@ export default function AdminApp() {
           <h1 className="h-section !text-[clamp(1.8rem,1.3rem+1.6vw,2.6rem)]">{title}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a href="/account" className="btn btn-quiet !min-h-10 !py-2">
-            My account
-          </a>
+          <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => setTab("mylogin")}>
+            My login
+          </button>
           <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => sb().auth.signOut()}>
             Sign out
           </button>
@@ -699,6 +702,8 @@ export default function AdminApp() {
           {current === "staff" && <Staff session={session} />}
           {current === "settings" && <Settings session={session} />}
           {current === "activity" && <Activity />}
+          {current === "pledge" && <PledgeEditor />}
+          {current === "mylogin" && <MyLogin email={session.user.email ?? ""} />}
           {current === "messages" && <Messages role={role} />}
           {current === "broadcast" && <Broadcast key={prefill?.subject ?? "new"} prefill={prefill} onSent={() => setPrefill(null)} />}
         </div>

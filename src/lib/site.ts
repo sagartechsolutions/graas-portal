@@ -9,16 +9,16 @@ export const NAV = [
   { href: "/about", label: "About" },
   { href: "/membership", label: "Membership" },
   { href: "/chapters", label: "Chapters" },
+  { href: "/events", label: "Events" },
   { href: "/industries", label: "Industries" },
+  { href: "/updates", label: "Updates" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/contact", label: "Contact" },
 ];
 
 export const PROGRAMS = [
   { href: "/learn", label: "Learn", note: "Live lectures and courses" },
-  { href: "/events", label: "Events", note: "Workshops and competitions" },
   { href: "/graascon", label: "GRAASCON", note: "The yearly conference" },
-  { href: "/updates", label: "Updates", note: "News from the society" },
-  { href: "/gallery", label: "Gallery", note: "Robots, labs and people" },
   { href: "/verify", label: "Verify a member", note: "Check a member ID or chapter" },
 ];
 

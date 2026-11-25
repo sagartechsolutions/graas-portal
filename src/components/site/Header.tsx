@@ -13,6 +13,8 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  // Where a signed-in login goes: staff to Admin, chapter logins to their console, members to My account.
+  const [home, setHome] = useState({ href: "/account", label: "My account" });
   const staffArea = pathname.startsWith("/admin");
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 26, mass: 0.4 });
@@ -30,6 +32,16 @@ export default function Header() {
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => {
+    if (!signedIn) return;
+    browserClient()
+      .rpc("my_role")
+      .then(({ data }) => {
+        if (data?.staff && !data?.member) setHome({ href: "/admin", label: "Admin" });
+        else if (data?.coordinator && !data?.member) setHome({ href: "/chapter", label: "Chapter console" });
+        else setHome({ href: "/account", label: "My account" });
+      });
+  }, [signedIn]);
+  useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
@@ -42,7 +54,7 @@ export default function Header() {
 
   const here = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const item = (href: string) =>
-    `relative rounded-full px-3 py-2 text-[0.95rem] font-medium transition-colors hover:bg-mist 2xl:px-3.5 ${here(href) ? "text-ink" : "text-ink2 hover:text-ink"}`;
+    `relative rounded-full px-2.5 py-2 text-[0.92rem] font-medium transition-colors hover:bg-mist 2xl:px-3.5 2xl:text-[0.95rem] ${here(href) ? "text-ink" : "text-ink2 hover:text-ink"}`;
   const inMore = PROGRAMS.some((p) => here(p.href));
 
   return (
@@ -56,7 +68,7 @@ export default function Header() {
           <Link href="/" aria-label="GRAAS home" className="shrink-0">
             <Logo />
           </Link>
-          <nav aria-label="Main" className={`hidden items-center gap-0.5 ${staffArea ? "" : "xl:flex"}`}>
+          <nav aria-label="Main" className={`hidden items-center gap-0 ${staffArea ? "" : "min-[1360px]:flex"}`}>
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className={item(n.href)} aria-current={here(n.href) ? "page" : undefined}>
                 {n.label}
@@ -89,19 +101,20 @@ export default function Header() {
               </Link>
             ) : (
               <>
-                <Link href={signedIn ? "/account" : "/signin"} className="hidden rounded-full px-3.5 py-2 text-[0.95rem] font-semibold transition-colors hover:bg-mist sm:inline-flex">
-                  {signedIn ? "My account" : "Sign in"}
+                <Link href={signedIn ? home.href : "/signin"} className="hidden whitespace-nowrap rounded-full px-3.5 py-2 text-[0.95rem] font-semibold transition-colors hover:bg-mist sm:inline-flex">
+                  {signedIn ? home.label : "Sign in"}
                 </Link>
                 {!signedIn && (
-                  <Link href="/join" className="btn btn-primary hidden !min-h-11 !px-5 sm:inline-flex">
-                    Become a member
+                  <Link href="/join" className="btn btn-primary hidden whitespace-nowrap !min-h-11 !px-5 sm:inline-flex">
+                    <span className="2xl:hidden">Join</span>
+                    <span className="hidden 2xl:inline">Become a member</span>
                   </Link>
                 )}
               </>
             )}
             <button
               type="button"
-              className={`h-11 w-11 items-center justify-center rounded-full border border-line bg-white ${staffArea ? "hidden" : "flex xl:hidden"}`}
+              className={`h-11 w-11 items-center justify-center rounded-full border border-line bg-white ${staffArea ? "hidden" : "flex min-[1360px]:hidden"}`}
               aria-expanded={open}
               aria-controls="mobile-menu"
               aria-label={open ? "Close menu" : "Open menu"}
@@ -116,7 +129,7 @@ export default function Header() {
         <motion.div aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-go" style={{ scaleX: progress }} />
       </header>
       {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-[4.5rem] z-40 overflow-y-auto bg-white xl:hidden">
+        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-[4.5rem] z-40 overflow-y-auto bg-white min-[1360px]:hidden">
           <nav aria-label="Mobile" className="shell flex flex-col py-5">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} onClick={() => setOpen(false)} className={`flex items-center justify-between border-b border-line py-3.5 text-2xl font-semibold tracking-tight ${here(n.href) ? "text-ink" : "text-ink2"}`}>
@@ -132,8 +145,8 @@ export default function Header() {
                 </Link>
               ))}
             </div>
-            <Link href={signedIn ? "/account" : "/join"} onClick={() => setOpen(false)} className="btn btn-primary mt-7">
-              {signedIn ? "My account" : "Become a member"}
+            <Link href={signedIn ? home.href : "/join"} onClick={() => setOpen(false)} className="btn btn-primary mt-7">
+              {signedIn ? home.label : "Become a member"}
             </Link>
             {!signedIn && (
               <Link href="/signin" onClick={() => setOpen(false)} className="btn btn-ghost mt-3">

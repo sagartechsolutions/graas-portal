@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { PledgeBox } from "./Pledge";
 import { browserClient, portal } from "@/lib/browser";
 import { INDIAN_STATES, inr } from "@/lib/money";
 import type { Plan } from "@/lib/site";
@@ -48,6 +49,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
     const v = (k: string) => String(f.get(k) ?? "").trim();
     setErr(null);
     if (f.get("accept") !== "on") return setErr({ field: "accept", error: "Please accept the membership rules and policies to continue." });
+    if (!signedIn && f.get("pledge") !== "on") return setErr({ field: "pledge", error: "Please take the GRAAS member pledge to complete your application." });
     setBusy(true);
     const sb = browserClient();
     const details = { gender: v("gender"), course: v("course"), course_other: v("course_other"), branch: v("branch"), branch_other: v("branch_other"), study_year: v("study_year"), designation: v("designation") };
@@ -78,6 +80,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
       password: String(f.get("password") ?? ""),
       ref: params.get("ref") ?? "",
       accept: true,
+      pledge: true,
       website_hp: v("website"),
     });
     if (!res.ok) {
@@ -255,6 +258,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
             )}
 
             <div className="grid gap-4">
+              {!signedIn && <PledgeBox invalid={err?.field === "pledge"} />}
               <label className="flex items-start gap-3 text-[0.95rem]">
                 <input type="checkbox" name="accept" className="mt-1 h-5 w-5 shrink-0 accent-[#067a2e]" {...bad("accept")} />
                 <span>

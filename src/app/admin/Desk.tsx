@@ -309,7 +309,7 @@ export function Staff({ session }: { session: Session }) {
     setBusy(false);
     if (!r.ok) return setMsg({ tone: "bad", text: r.error ?? "Could not add the staff member." });
     form.reset();
-    setMsg({ tone: "good", text: "Staff account created. Give them the email and first password, and ask them to change it from My account, Profile." });
+    setMsg({ tone: "good", text: "Staff account created. Give them the email and first password, and ask them to change it in Admin, under My login." });
     load();
   }
 

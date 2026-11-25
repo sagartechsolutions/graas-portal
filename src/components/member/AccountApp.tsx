@@ -11,7 +11,10 @@ import { INDIAN_STATES, STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/
 import type { Plan } from "@/lib/site";
 import { EMPTY_OPTIONS, GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, initials, isIndividual, isMinor, isSchoolCourse, removePhoto, uploadPhoto, usePhoto, type ProfileOptions } from "./Details";
 import { planFee } from "./JoinApp";
-import { Certificate, IdCards } from "./MemberDocs";
+import CareerProfile from "./CareerProfile";
+import { Certificate, IdCards, PledgeCertificate } from "./MemberDocs";
+import { PledgeBox, TakePledge, usePledge } from "./Pledge";
+import Resume from "./Resume";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
@@ -245,7 +248,7 @@ function PayPanel({ a, renewal, onChange }: { a: Account; renewal: boolean; onCh
   );
 }
 
-function Receipt({ o, org }: { o: any; org: any }) {
+export function Receipt({ o, org }: { o: any; org: any }) {
   const row = "flex justify-between gap-6 py-1.5";
   return (
     <div className="print-area mx-auto w-full max-w-2xl rounded-[18px] border border-line bg-white p-6 shadow-[var(--shadow-card)] sm:p-10">
@@ -1142,8 +1145,9 @@ function FirstPassword({ a, done }: { a: Account; done: () => void }) {
     if (p1.length < 8) return setErr({ field: "password", error: "Use at least 8 characters." });
     if (p1 !== p2) return setErr({ field: "password2", error: "The two passwords do not match." });
     if (f.get("accept") !== "on") return setErr({ field: "accept", error: "Please accept the membership rules and policies to continue." });
+    if (a.membership && f.get("pledge") !== "on") return setErr({ field: "pledge", error: "Please take the GRAAS member pledge to confirm your membership." });
     setBusy(true);
-    const r = await portal("first_password", { password: p1, accept: true });
+    const r = await portal("first_password", { password: p1, accept: true, pledge: !!a.membership });
     setBusy(false);
     if (!r.ok) return setErr({ field: r.field, error: r.error ?? "Could not save the password." });
     done();
@@ -1193,6 +1197,7 @@ function FirstPassword({ a, done }: { a: Account; done: () => void }) {
               .{isMinor(a.profile.dob, a.today) ? " My parent or guardian agrees to my membership." : ""}
             </span>
           </label>
+          {a.membership && <PledgeBox invalid={err?.field === "pledge"} />}
           {err && <Notice tone="bad">{err.error}</Notice>}
           <button className="btn btn-primary justify-self-start" disabled={busy}>
             {busy ? "Saving…" : "Save and continue"}
@@ -1204,13 +1209,125 @@ function FirstPassword({ a, done }: { a: Account; done: () => void }) {
   );
 }
 
+/** A staff or chapter-coordinator login has no member area: it belongs to the society or to a chapter, not to a person. */
+function OtherLogin({ kind, email }: { kind: "staff" | "chapter"; email: string }) {
+  return (
+    <section className="bg-mist">
+      <div className="mx-auto w-full max-w-xl px-5 py-14">
+        <h1 className="h-section">{kind === "staff" ? "This is a GRAAS staff login" : "This is a chapter login"}</h1>
+        <p className="lede mt-4">
+          {email} {kind === "staff" ? "works in GRAAS admin. Staff logins do not hold a membership." : "runs a GRAAS chapter. Chapter logins belong to the chapter, so they can be handed over when the coordinator changes."}
+        </p>
+        <p className="mt-3 text-ink2">To be a member yourself, sign out and join with your personal email.</p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Link href={kind === "staff" ? "/admin" : "/chapter"} className="btn btn-primary">
+            {kind === "staff" ? "Open admin" : "Open the chapter console"}
+          </Link>
+          <button type="button" className="btn btn-ghost" onClick={() => sb().auth.signOut().then(() => (window.location.href = "/"))}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Certificates({ a, org, state, go }: { a: Account; org: any; state: string; go: (t: string) => void }) {
+  const m = a.membership;
+  const missing = missingForCertificate(a);
+  const pledge = usePledge(a.profile.pledge_version);
+  const [doc, setDoc] = useState<"membership" | "pledge" | "id">(state === "active" ? "membership" : "id");
+  const items: { id: "membership" | "pledge" | "id"; title: string; note: string; ready: boolean }[] = [
+    { id: "membership", title: "Membership certificate", note: "A4 landscape", ready: state === "active" && missing.length === 0 },
+    { id: "pledge", title: "Pledge certificate", note: "A4 portrait, confirms membership", ready: state === "active" && missing.length === 0 && !!a.profile.pledged_at },
+    { id: "id", title: "Member ID card", note: "Bank-card size, both sides", ready: true },
+  ];
+  const cur = items.find((x) => x.id === doc)!;
+  return (
+    <div className="grid gap-6">
+      <div className="grid gap-3 print:hidden sm:grid-cols-3">
+        {items.map((x) => (
+          <button key={x.id} type="button" onClick={() => setDoc(x.id)} aria-pressed={doc === x.id} className={`card card-lift flex items-start gap-3 p-4 text-left ${doc === x.id ? "ring-2 ring-ink" : ""}`}>
+            <span className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${x.ready ? "bg-go text-white" : "border-2 border-slate3 text-transparent"}`} aria-hidden="true">
+              ✓
+            </span>
+            <span>
+              <b className="block font-semibold">{x.title}</b>
+              <span className="text-sm text-ink2">{x.ready ? x.note : "Not ready yet"}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {doc === "id" ? (
+        <div className="card grid gap-6 p-6 sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <div>
+              <h2 className="h-card !text-2xl">Digital member ID</h2>
+              <p className="text-ink2">Prints at bank-card size, front and back. Cut along the edges and keep it in your wallet.</p>
+            </div>
+            <PrintButton label="Print or save as PDF" />
+          </div>
+          {!a.profile.photo_updated_at && (
+            <div className="print:hidden">
+              <Notice tone="warn">
+                Add {isIndividual(m?.plan?.audience) ? "your photo" : "your logo"} to complete your member ID.{" "}
+                <button type="button" className="font-semibold underline decoration-2 underline-offset-4" onClick={() => go("profile")}>
+                  Go to Account
+                </button>
+              </Notice>
+            </div>
+          )}
+          <IdCards a={a} org={org} />
+          <p className="max-w-2xl text-ink2 print:hidden">Anyone can scan the code on the back, or type your member number at graas.org.in/verify, to confirm that this membership is current.</p>
+        </div>
+      ) : state !== "active" ? (
+        <div className="card p-6 sm:p-8">
+          <h2 className="h-card !text-2xl">{cur.title}</h2>
+          <p className="mt-2 text-ink2">Certificates are issued while the membership is active. Renew from Overview to get them again.</p>
+        </div>
+      ) : missing.length > 0 ? (
+        <div className="card grid gap-5 p-6 sm:p-8">
+          <div>
+            <h2 className="h-card !text-2xl">Your certificates are almost ready</h2>
+            <p className="mt-1 text-ink2">GRAAS issues certificates once your details are complete, so they always carry your photo and the right details.</p>
+          </div>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {missing.map((x) => (
+              <li key={x} className="flex items-center gap-3 rounded-xl bg-mist px-4 py-3 font-medium">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate3" aria-hidden="true" />
+                {x}
+              </li>
+            ))}
+          </ul>
+          <p>
+            <button type="button" className="btn btn-primary" onClick={() => go("profile")}>
+              Complete my details
+            </button>
+          </p>
+        </div>
+      ) : doc === "pledge" && !a.profile.pledged_at ? (
+        <TakePledge name={a.profile.full_name ?? ""} onDone={() => window.location.reload()} />
+      ) : (
+        <div className="grid gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <h2 className="h-card !text-2xl">{cur.title}</h2>
+            <PrintButton label="Print or save as PDF" />
+          </div>
+          {doc === "membership" ? <Certificate a={a} org={org} /> : pledge ? <PledgeCertificate a={a} org={org} pledge={pledge} /> : <p className="text-ink2">Loading…</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   const plans = allPlans.filter((p) => p.self_join !== false);
   const router = useRouter();
   const params = useSearchParams();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [a, setA] = useState<Account | null>(null);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(params.get("tab") ?? "overview");
   const [flash, setFlash] = useState(params.get("welcome") ? "Your account is ready and your application is saved." : "");
   const [org, setOrg] = useState<any>(null);
   const [receipt, setReceipt] = useState<any>(null);
@@ -1259,7 +1376,9 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   if (!session || !a) return <div className="shell py-16 text-ink2">Loading your account…</div>;
   if (!a.profile) return <div className="shell py-16 text-ink2">Your account could not be loaded. Please sign out and sign in again.</div>;
 
-  if (a.profile.must_change_password) return <FirstPassword a={a} done={() => reload2("Welcome to GRAAS. Your password is set.")} />;
+  if (a.profile.must_change_password && (a.membership || !a.my_chapter)) return <FirstPassword a={a} done={() => reload2("Welcome to GRAAS. Your password is set.")} />;
+  if (!a.membership && a.is_staff) return <OtherLogin kind="staff" email={a.profile.email} />;
+  if (!a.membership && a.my_chapter) return <OtherLogin kind="chapter" email={a.profile.email} />;
 
   const m = a.membership;
   const state = effectiveStatus(m, a.today);
@@ -1270,12 +1389,14 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   };
   const needEmail = !!a.channels?.email && !a.profile.email_verified_at;
   const needPhone = !!a.channels?.whatsapp && !!a.profile.phone && !a.profile.phone_verified_at;
+  const orgMember = !!m && !isIndividual(m.plan?.audience);
   const tabs = [
     { id: "overview", label: "Overview", show: true },
-    { id: "card", label: "Member ID", show: hasId },
-    { id: "certificate", label: "Certificate", show: hasId && state === "active" },
+    { id: "career", label: orgMember ? "Company page" : "Profile", show: !!m },
+    { id: "resume", label: "Resume", show: !!m && !orgMember },
+    { id: "certificates", label: "Certificates", show: hasId },
     { id: "payments", label: "Payments", show: true },
-    { id: "profile", label: "Profile", show: true },
+    { id: "profile", label: "Account", show: true },
     { id: "help", label: "Help", show: true },
   ].filter((t) => t.show);
 
@@ -1288,9 +1409,9 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
             <h1 className="h-section !text-[clamp(1.8rem,1.3rem+2vw,2.8rem)]">{a.profile.full_name ?? a.profile.email}</h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            {a.is_staff && (
-              <Link href="/admin" className="btn btn-ghost !min-h-11">
-                Staff admin
+            {a.my_chapter && (
+              <Link href="/chapter" className="btn btn-ghost !min-h-11">
+                Chapter console
               </Link>
             )}
             <button type="button" className="btn btn-ghost !min-h-11" onClick={() => sb().auth.signOut()}>
@@ -1317,59 +1438,15 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
               {needPhone && <VerifyCard kind="phone" target={`+91 ${a.profile.phone}`} required={a.channels?.phone_required} onDone={() => reload("Your WhatsApp number is confirmed. Account updates will come there too.")} />}
             </div>
           )}
-          {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
-          {tab === "card" && hasId && (
-            <div className="card grid gap-6 p-6 sm:p-8">
-              <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <div>
-                  <h2 className="h-card !text-2xl">Digital member ID</h2>
-                  <p className="text-ink2">Prints at bank-card size, front and back. Cut along the edges and keep it in your wallet.</p>
-                </div>
-                <PrintButton label="Print or save as PDF" />
-              </div>
-              {!a.profile.photo_updated_at && (
-                <div className="print:hidden">
-                  <Notice tone="warn">
-                    Add {isIndividual(m?.plan?.audience) ? "your photo" : "your logo"} to complete your member ID.{" "}
-                    <button type="button" className="font-semibold underline decoration-2 underline-offset-4" onClick={() => setTab("profile")}>
-                      Go to Profile
-                    </button>
-                  </Notice>
-                </div>
-              )}
-              <IdCards a={a} org={org} />
-              <p className="max-w-2xl text-ink2 print:hidden">Anyone can scan the code on the back, or type your member number at {typeof window !== "undefined" ? window.location.host : ""}/verify, to confirm that this membership is current. The card always shows your latest details and membership type.</p>
+          {tab === "overview" && m && !a.profile.pledged_at && (
+            <div className="mb-5 print:hidden">
+              <TakePledge name={a.profile.full_name ?? ""} onDone={(msg) => reload(msg)} />
             </div>
           )}
-          {tab === "certificate" && hasId && (missingForCertificate(a).length > 0 ? (
-            <div className="card grid gap-5 p-6 sm:p-8">
-              <div>
-                <h2 className="h-card !text-2xl">Your certificate is almost ready</h2>
-                <p className="mt-1 text-ink2">GRAAS issues the membership certificate once your profile is complete, so it always carries your photo and the right details.</p>
-              </div>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {missingForCertificate(a).map((x) => (
-                  <li key={x} className="flex items-center gap-3 rounded-xl bg-mist px-4 py-3 font-medium">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate3" aria-hidden="true" />
-                    {x}
-                  </li>
-                ))}
-              </ul>
-              <p>
-                <button type="button" className="btn btn-primary" onClick={() => setTab("profile")}>
-                  Complete my profile
-                </button>
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <h2 className="h-card !text-2xl">Membership certificate</h2>
-                <PrintButton label="Print or save as PDF" />
-              </div>
-              <Certificate a={a} org={org} />
-            </div>
-          ))}
+          {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
+          {tab === "career" && m && <CareerProfile a={a} goDetails={() => setTab("profile")} />}
+          {tab === "resume" && m && <Resume a={a} />}
+          {tab === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={setTab} />}
           {tab === "payments" &&
             (receipt ? (
               <div className="grid gap-5">

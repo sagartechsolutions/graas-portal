@@ -224,9 +224,12 @@ Deno.serve(async (req) => {
       const pw = String(b.password ?? "");
       if (pw.length < 8 || pw.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
       if (b.accept !== true) return fail("Please accept the membership rules and policies to continue.", { field: "accept" });
+      const member = (await admin.from("memberships").select("id").eq("user_id", user.id).limit(1)).data?.length ?? 0;
+      if (member && b.pledge !== true) return fail("Please take the GRAAS member pledge to confirm your membership.", { field: "pledge" });
       const u = await admin.auth.admin.updateUserById(user.id, { password: pw });
       if (u.error) return fail(/weak|short|pwned|leak/i.test(u.error.message ?? "") ? "Choose a stronger password." : "Could not save the password. Please try again.", { field: "password" });
       await admin.rpc("svc_first_password_done", { p_user: user.id });
+      if (member) await admin.rpc("svc_mark_pledged", { p_user: user.id });
       await audit("first_password_set", "profiles", user.id);
       return out({ ok: true });
     }
@@ -284,6 +287,8 @@ Deno.serve(async (req) => {
         await admin.auth.admin.deleteUser(id);
         return out(done?.data ?? { ok: false, error: "Could not save the application. Please try again." });
       }
+      // The member pledge, ticked on the sign-up form (the website asks for it; members can also take it later).
+      if (b.pledge === true) await admin.rpc("svc_mark_pledged", { p_user: id });
       // Email confirmation: the code goes out now, and the member types it on the next screen.
       const m = await loadMessaging(admin);
       if (!emailReady(m)) return out({ ok: true, verify: null });

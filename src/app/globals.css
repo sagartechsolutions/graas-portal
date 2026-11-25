@@ -426,6 +426,8 @@ input[type="range"].jog::-moz-range-thumb {
   /* Certificate: a full A4 landscape sheet (the page size is set by the certificate itself). */
   .print-cert { min-width: 0 !important; width: 297mm !important; }
   .print-cert .cert-sheet { width: 297mm !important; height: 210mm !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; }
+  .print-cert-p { min-width: 0 !important; max-width: none !important; width: 210mm !important; }
+  .print-cert-p .cert-sheet { width: 210mm !important; height: 297mm !important; box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important; }
 }
 
 /* Step rails fill as they scroll into view (where the browser supports scroll-driven animation) */
