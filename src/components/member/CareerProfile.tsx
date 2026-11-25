@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { LANGUAGES, PLACES, SKILLS } from "@/lib/suggest";
 import { useEffect, useState } from "react";
 import { browserClient } from "@/lib/browser";
 import ProfileView, { OPEN_TO, strength } from "./ProfileView";
@@ -80,8 +81,13 @@ const LINKS: [string, string][] = [
   ["website", "Website"],
 ];
 
-export function Tags({ value, onChange, ph, max }: { value: string[]; onChange: (v: string[]) => void; ph: string; max: number }) {
+export function Tags({ value, onChange, ph, max, suggest }: { value: string[]; onChange: (v: string[]) => void; ph: string; max: number; suggest?: string[] }) {
   const [t, setT] = useState("");
+  const [more, setMore] = useState(false);
+  const has = (x: string) => value.some((v) => v.toLowerCase() === x.toLowerCase());
+  const q = t.trim().toLowerCase();
+  const pool = (suggest ?? []).filter((x) => !has(x) && (!q || x.toLowerCase().includes(q)));
+  const shown = more || q ? pool : pool.slice(0, 12);
   const add = () => {
     const parts = t.split(",").map((x) => x.trim()).filter(Boolean);
     if (!parts.length) return;
@@ -118,6 +124,30 @@ export function Tags({ value, onChange, ph, max }: { value: string[]; onChange: 
           />
         </li>
       </ul>
+      {pool.length > 0 && value.length < max && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-line px-1 pt-2">
+          <span className="mr-1 text-xs font-semibold text-ink2">{q ? "Matching:" : "Suggested:"}</span>
+          {shown.map((x) => (
+            <button
+              key={x}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (value.length < max) onChange([...value, x]);
+                setT("");
+              }}
+              className="rounded-full border border-dashed border-slate5 px-2.5 py-0.5 text-xs font-medium text-ink2 transition-colors hover:border-go hover:bg-go-soft hover:text-go-deep"
+            >
+              + {x}
+            </button>
+          ))}
+          {!q && pool.length > 12 && (
+            <button type="button" className="text-xs font-semibold underline underline-offset-2" onClick={() => setMore((v) => !v)}>
+              {more ? "Fewer" : `${pool.length - 12} more`}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -282,7 +312,7 @@ export default function CareerProfile({ a, goDetails }: { a: any; goDetails: () 
             </div>
             <div className="grid gap-1.5 font-medium">
               Focus areas
-              <Tags value={mp.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, robotics, machine vision… (press Enter)" max={30} />
+              <Tags value={mp.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, robotics, machine vision… (press Enter)" max={30} suggest={SKILLS} />
             </div>
           </section>
         ) : (
@@ -301,7 +331,7 @@ export default function CareerProfile({ a, goDetails }: { a: any; goDetails: () 
               </label>
               <div className="grid gap-1.5 font-medium">
                 {school ? "Interests and skills" : "Skills"}
-                <Tags value={mp.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, Arduino, SolidWorks… (press Enter after each)" max={30} />
+                <Tags value={mp.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, Arduino, SolidWorks… (press Enter after each)" max={30} suggest={SKILLS} />
                 <span className="text-sm font-normal text-ink2">GRAAS matches you to opportunities by these skills. Add at least five.</span>
               </div>
               {!school && (
@@ -321,7 +351,7 @@ export default function CareerProfile({ a, goDetails }: { a: any; goDetails: () 
                   </fieldset>
                   <div className="grid gap-1.5 font-medium">
                     Preferred places to work
-                    <Tags value={mp.locations ?? []} onChange={(v) => set("locations", v)} ph="Nashik, Pune, Remote…" max={5} />
+                    <Tags value={mp.locations ?? []} onChange={(v) => set("locations", v)} ph="Nashik, Pune, Remote…" max={5} suggest={PLACES} />
                   </div>
                 </>
               )}
@@ -333,7 +363,7 @@ export default function CareerProfile({ a, goDetails }: { a: any; goDetails: () 
               <h3 className="h-card">Languages and links</h3>
               <div className="grid gap-1.5 font-medium">
                 Languages
-                <Tags value={mp.languages ?? []} onChange={(v) => set("languages", v)} ph="English, Marathi, Hindi…" max={10} />
+                <Tags value={mp.languages ?? []} onChange={(v) => set("languages", v)} ph="English, Marathi, Hindi…" max={10} suggest={LANGUAGES} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {LINKS.filter(([k]) => !school || k !== "linkedin").map(([k, label]) => (

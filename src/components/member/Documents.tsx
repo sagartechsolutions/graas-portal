@@ -13,8 +13,8 @@ const sb = () => browserClient();
 const MAX = 5 * 1024 * 1024;
 const KINDS: Record<string, { label: string; accept: string; hint: string }> = {
   certificate: { label: "Certificate", accept: ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp", hint: "PDF or image (JPG, PNG), up to 5 MB" },
-  resume: { label: "Resume", accept: ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document", hint: "PDF or Word, up to 5 MB" },
   other: { label: "Other document", accept: ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp", hint: "For example an internship letter or a mark sheet. PDF or image, up to 5 MB" },
+  resume: { label: "Own resume (not recommended)", accept: ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document", hint: "PDF or Word, up to 5 MB" },
 };
 const STATUS: Record<string, { text: string; cls: string }> = {
   verified: { text: "Verified by GRAAS", cls: "bg-go-soft text-go-deep" },
@@ -47,7 +47,7 @@ function Switch({ on, set, label, disabled }: { on: boolean; set: (v: boolean) =
   );
 }
 
-function Upload({ userId, onDone }: { userId: string; onDone: (msg: string) => void }) {
+function Upload({ userId, onDone, goResume }: { userId: string; onDone: (msg: string) => void; goResume?: () => void }) {
   const [kind, setKind] = useState("certificate");
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -102,6 +102,17 @@ function Upload({ userId, onDone }: { userId: string; onDone: (msg: string) => v
           </button>
         ))}
       </div>
+      {kind === "resume" && (
+        <div className="rounded-2xl bg-[#fff6e5] px-4 py-3 text-sm text-[#5c3a00]">
+          <p className="font-semibold">Not recommended. Use the GRAAS resume instead.</p>
+          <p className="mt-1">Companies on GRAAS find, match and shortlist members through their GRAAS profile and resume. An uploaded file cannot be searched or matched, so it brings fewer opportunities. Upload your own only if a company asks for its format.</p>
+          {goResume && (
+            <button type="button" className="mt-2 font-semibold underline underline-offset-4" onClick={goResume}>
+              Open the GRAAS resume builder
+            </button>
+          )}
+        </div>
+      )}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -270,7 +281,7 @@ function DocRow({ d, publicOn, reload, say }: { d: any; publicOn: boolean; reloa
   );
 }
 
-export default function Documents({ a, goPublic }: { a: any; goPublic?: () => void }) {
+export default function Documents({ a, goPublic, goResume }: { a: any; goPublic?: () => void; goResume?: () => void }) {
   const [docs, setDocs] = useState<any[] | null>(null);
   const [pub, setPub] = useState<any>(null);
   const [msg, setMsg] = useState<{ tone: "good" | "bad"; text: string } | null>(null);
@@ -296,6 +307,7 @@ export default function Documents({ a, goPublic }: { a: any; goPublic?: () => vo
         {failed && <p className="card p-5 font-medium">Documents could not be loaded just now. Please refresh the page in a minute.</p>}
         <Upload
           userId={a.profile.id}
+          goResume={goResume}
           onDone={(t) => {
             say("good", t);
             load();
@@ -309,7 +321,7 @@ export default function Documents({ a, goPublic }: { a: any; goPublic?: () => vo
         <section className="card p-5 sm:p-6">
           <h3 className="h-card">Resumes</h3>
           {resumes.length === 0 ? (
-            <p className="mt-2 text-ink2">No resume uploaded. You can also build one in the Resume tab.</p>
+            <p className="mt-2 text-ink2">None uploaded. That is fine: your GRAAS resume (Resume tab) is what companies on GRAAS see and match.</p>
           ) : (
             <ul className="mt-4 grid gap-3">
               {resumes.map((d) => (

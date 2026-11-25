@@ -67,7 +67,7 @@ export default function MemberCard({
       <div className="relative flex h-full flex-col justify-between p-[7%]">
         <div className="flex items-start justify-between">
           <span className="origin-top-left scale-[0.82]">
-            <Logo tone="light" />
+            <Logo tone="light" brand />
           </span>
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white/10 px-2.5 py-1 text-[0.7rem] font-medium">
             <span className="dot" /> {badge}

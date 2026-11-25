@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { BRANCHES, SKILLS } from "@/lib/suggest";
 import { useState } from "react";
 import { Tags } from "@/components/member/CareerProfile";
 import { browserClient } from "@/lib/browser";
@@ -83,7 +84,7 @@ export default function OppForm({ initial, staff = false, onDone, onCancel }: { 
       </label>
       <div className="grid gap-1.5 font-medium">
         Skills you look for
-        <Tags value={f.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, SCADA, AutoCAD… (press Enter)" max={15} />
+        <Tags value={f.skills ?? []} onChange={(v) => set("skills", v)} ph="PLC, SCADA, AutoCAD… (press Enter)" max={15} suggest={SKILLS} />
         <span className="text-sm font-normal text-ink2">GRAAS uses these to suggest your top 5 matching members.</span>
       </div>
 
@@ -105,7 +106,7 @@ export default function OppForm({ initial, staff = false, onDone, onCancel }: { 
 
       <div className="grid gap-1.5 font-medium">
         Branches <span className="text-sm font-normal text-ink2">(optional; leave empty for any branch)</span>
-        <Tags value={f.branches ?? []} onChange={(v) => set("branches", v)} ph="Mechanical, Electrical, Mechatronics…" max={12} />
+        <Tags value={f.branches ?? []} onChange={(v) => set("branches", v)} ph="Mechanical, Electrical, Mechatronics…" max={12} suggest={BRANCHES} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

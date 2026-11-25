@@ -532,6 +532,11 @@ function Settings({ session }: { session: Session }) {
           New applications are open
         </label>
         <p className="text-xs text-ink2">Untick to pause new sign-ups. Existing members can still sign in, pay and renew.</p>
+        <label className="mt-2 flex items-center gap-2.5 font-semibold">
+          <input type="checkbox" className="h-5 w-5 accent-[#067a2e]" checked={!!mem.show_counts} onChange={(e) => setMem((m) => ({ ...m, show_counts: e.target.checked }))} />
+          Show live member numbers on the About page
+        </label>
+        <p className="text-xs text-ink2">Counted from current records: active members by type and approved chapters. Switch on when the numbers help; they update by themselves.</p>
       </div>
       <ProfileOptionsEditor session={session} onSaved={() => refreshSite(session)} />
       <div className="plate grid gap-3 p-5">

@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { LogoMark } from "@/components/site/Logo";
 import { browserClient } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
 import { initials, usePhoto } from "./Details";
@@ -18,8 +19,10 @@ import Qr from "./Qr";
    places. Printing sends only the pages (one per sheet) to the printer. */
 
 export type Tpl = "modern" | "classic" | "executive" | "compact" | "creative" | "technical";
-export type ResumePrefs = { template: Tpl; show_photo: boolean; show_qr: boolean; one_page: boolean; accent: string; hide: string[] };
-export const DEFAULT_PREFS: ResumePrefs = { template: "modern", show_photo: true, show_qr: true, one_page: false, accent: "navy", hide: [] };
+export type ResumePrefs = { template: Tpl; show_photo: boolean; show_qr: boolean; show_brand: boolean; one_page: boolean; accent: string; hide: string[]; skills: string[] };
+export const DEFAULT_PREFS: ResumePrefs = { template: "modern", show_photo: true, show_qr: true, show_brand: true, one_page: false, accent: "navy", hide: [], skills: [] };
+/* At most this many skills go on a resume, so the side panel (and its QR code) always fits. */
+export const RESUME_SKILLS = 12;
 
 export const TEMPLATES: { id: Tpl; name: string; hint: string }[] = [
   { id: "modern", name: "Modern", hint: "Side panel with photo, contact and skills" },
@@ -205,6 +208,13 @@ function Avatar({ photo, name, size, round = true, ring }: { photo: string | nul
   );
 }
 
+/* The member's chosen resume skills that are still in the profile, in profile order; otherwise the first 12. */
+export function pickSkills(all: string[], chosen: string[] | undefined) {
+  const set = new Set((chosen ?? []).map((x) => x.toLowerCase()));
+  const picked = set.size ? all.filter((x) => set.has(x.toLowerCase())) : all;
+  return picked.slice(0, RESUME_SKILLS);
+}
+
 /* Everything the resume needs, worked out once from the profile. */
 function useContent(a: any, mp: any, docs: any[], prefs: ResumePrefs) {
   return useMemo(() => {
@@ -234,7 +244,7 @@ function useContent(a: any, mp: any, docs: any[], prefs: ResumePrefs) {
       name: p.full_name ?? "",
       qr: active && prefs.show_qr ? `https://graas.org.in/m/${m.member_no}` : null,
       about: hide.has("about") ? "" : mp.about ?? "",
-      skills: hide.has("skills") ? [] : ((mp.skills ?? []) as string[]),
+      skills: hide.has("skills") ? [] : pickSkills((mp.skills ?? []) as string[], prefs.skills),
       languages: hide.has("languages") ? [] : ((mp.languages ?? []) as string[]),
       lists: {
         experience: hide.has("experience") ? [] : mp.experience ?? [],
@@ -430,22 +440,6 @@ function Side({ c, photo, prefs, accent }: { c: C; photo: string | null; prefs: 
           </p>
         ))}
       </section>
-      {c.skills.length > 0 && (
-        <section style={{ display: "grid", gap: f(1.2) }}>
-          <SideTitle accent={accent}>Skills</SideTitle>
-          {c.skills.map((s) => (
-            <p key={s} style={{ fontSize: f(2.95) }}>
-              {s}
-            </p>
-          ))}
-        </section>
-      )}
-      {c.languages.length > 0 && (
-        <section style={{ display: "grid", gap: f(1.2) }}>
-          <SideTitle accent={accent}>Languages</SideTitle>
-          <p style={{ fontSize: f(2.95) }}>{c.languages.join(", ")}</p>
-        </section>
-      )}
       {c.active && !prefs.hide.includes("graas") && (
         <section style={{ display: "grid", gap: f(1) }}>
           <SideTitle accent={accent}>GRAAS member</SideTitle>
@@ -461,6 +455,22 @@ function Side({ c, photo, prefs, accent }: { c: C; photo: string | null; prefs: 
               Verify at graas.org.in/verify
             </p>
           )}
+        </section>
+      )}
+      {c.skills.length > 0 && (
+        <section style={{ display: "grid", gap: f(1.2) }}>
+          <SideTitle accent={accent}>Skills</SideTitle>
+          {c.skills.map((s) => (
+            <p key={s} style={{ fontSize: f(2.95) }}>
+              {s}
+            </p>
+          ))}
+        </section>
+      )}
+      {c.languages.length > 0 && (
+        <section style={{ display: "grid", gap: f(1.2) }}>
+          <SideTitle accent={accent}>Languages</SideTitle>
+          <p style={{ fontSize: f(2.95) }}>{c.languages.join(", ")}</p>
         </section>
       )}
     </div>
@@ -502,6 +512,15 @@ function Sheet({ c, tpl, accent, prefs, photo, first, n, total, blocks, sheetRef
           {running}
           {flow}
         </div>
+      )}
+      {prefs.show_brand && (
+        <p className="absolute flex items-center" style={{ left: mm(g.side ? g.side + g.x : g.x), bottom: mm(5), gap: mm(1.6), fontSize: f(2.2), color: "#6b7280" }}>
+          <LogoMark style={{ width: mm(4.6), height: "auto", display: "block" }} />
+          <span>
+            <b className="font-semibold text-[#000e21]">Global Robotics And Automation Society</b>
+            {c.active ? ` · Verified at graas.org.in/m/${c.m.member_no}` : " · graas.org.in"}
+          </span>
+        </p>
       )}
       {total > 1 && (
         <p className="absolute" style={{ right: mm(g.x), bottom: mm(5.5), fontSize: f(2.3), color: "#8e919a" }}>
@@ -635,6 +654,7 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
   const { blocks, plan, measure } = usePages(c, tpl, accent, prefs, photo);
   if (!mp || !c) return <div className="card p-8 text-ink2">Loading your resume…</div>;
   const set = (x: Partial<ResumePrefs>) => setPrefs((v) => ({ ...v, ...x }));
+  const allSkills = (mp.skills ?? []) as string[];
   const total = plan.pages.length;
   const sheets = (print: boolean) =>
     plan.pages.map((ids, i) => (
@@ -646,8 +666,9 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
     ));
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-      <aside className="grid content-start gap-4 print:hidden xl:sticky xl:top-24 xl:self-start">
+    // On wide screens the options and the pages are two panes that scroll separately, so a long resume never pushes the options away.
+    <div className="grid gap-6 xl:h-[calc(100vh-9rem)] xl:min-h-[34rem] xl:grid-cols-[20rem_minmax(0,1fr)]">
+      <aside className="grid content-start gap-4 print:hidden xl:h-full xl:overflow-y-auto xl:overscroll-contain xl:pb-2 xl:pr-1">
         <div className="card grid gap-5 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -658,6 +679,9 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
               {total} {total === 1 ? "page" : "pages"}
             </span>
           </div>
+          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+            Download PDF
+          </button>
           <fieldset className="grid gap-2">
             <legend className="mb-1 text-sm font-semibold">Design</legend>
             <div className="grid grid-cols-2 gap-2">
@@ -683,8 +707,35 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
           <div className="grid gap-2.5">
             <Toggle on={prefs.show_photo} set={(v) => set({ show_photo: v })} label="Show my photo" />
             <Toggle on={prefs.show_qr} set={(v) => set({ show_qr: v })} label="Show the GRAAS QR code" hint={c.active ? "Anyone who scans it sees that your membership is genuine." : "Appears once your membership is active."} />
+            <Toggle on={prefs.show_brand} set={(v) => set({ show_brand: v })} label="Show the GRAAS mark" hint="A small line at the foot of each page: Global Robotics And Automation Society, with your verified profile address." />
             <Toggle on={prefs.one_page} set={(v) => set({ one_page: v })} label="Try to keep to one page" hint="Text shrinks a little before a second page is added." />
           </div>
+          {allSkills.length > 0 && !prefs.hide.includes("skills") && (
+            <fieldset className="grid gap-2">
+              <legend className="mb-1 text-sm font-semibold">
+                Skills on the resume <span className="font-normal text-ink2">({c.skills.length} of up to {RESUME_SKILLS})</span>
+              </legend>
+              <div className="flex flex-wrap gap-1.5">
+                {allSkills.map((sk) => {
+                  const on = c.skills.some((x) => x.toLowerCase() === sk.toLowerCase());
+                  const full = !on && c.skills.length >= RESUME_SKILLS;
+                  return (
+                    <button
+                      key={sk}
+                      type="button"
+                      disabled={full}
+                      aria-pressed={on}
+                      onClick={() => set({ skills: on ? c.skills.filter((x) => x.toLowerCase() !== sk.toLowerCase()) : [...c.skills, sk] })}
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${on ? "border-ink bg-ink text-white" : full ? "border-line text-slate5" : "border-line hover:border-ink"}`}
+                    >
+                      {sk}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-ink2">Pick your strongest skills. Twelve keep the resume clean and leave room for the QR code. Add more skills in your career profile.</p>
+            </fieldset>
+          )}
           <details className="rounded-xl border border-line px-3 py-2">
             <summary className="cursor-pointer text-sm font-semibold">Sections to include</summary>
             <div className="mt-2 grid gap-1.5">
@@ -696,9 +747,6 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
               ))}
             </div>
           </details>
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            Download PDF
-          </button>
           <p className="-mt-2 text-xs text-ink2">
             In the print window choose “Save as PDF”, paper A4, margins none. {saved === "saving" ? "Saving your choices…" : saved === "saved" ? "Your choices are saved." : ""}
           </p>
@@ -715,21 +763,39 @@ export default function Resume({ a, goDocuments }: { a: any; goDocuments?: () =>
           </div>
         )}
         <div className="card grid gap-2 p-5 text-sm">
-          <p className="font-semibold">Have your own resume?</p>
-          <p className="text-ink2">Upload it as a PDF or Word file in Documents and share it with companies you apply to.</p>
+          <p className="font-semibold">
+            Uploading your own resume <span className="ml-1 rounded-full bg-[#fff6e5] px-2 py-0.5 text-xs font-semibold text-[#7a4b00]">Not recommended</span>
+          </p>
+          <p className="text-ink2">Companies on GRAAS find, match and shortlist you through your GRAAS profile and this resume. An uploaded file cannot be searched or matched, so you get fewer opportunities. Upload one only if a company asks for its own format.</p>
           {goDocuments && (
-            <button type="button" className="btn btn-ghost !min-h-10 justify-self-start" onClick={goDocuments}>
-              Upload a resume
+            <button type="button" className="justify-self-start text-sm font-semibold text-ink2 underline underline-offset-4 hover:text-ink" onClick={goDocuments}>
+              Upload anyway in Documents
             </button>
           )}
         </div>
       </aside>
 
-      <div className="min-w-0 overflow-x-auto pb-2">
+      <div className="min-w-0 xl:h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
         <style>{"@media print { @page { size: A4 portrait; margin: 0; } }"}</style>
-        <div className="relative mx-auto grid min-w-[560px] max-w-[860px] gap-6">
-          {measure}
-          {sheets(false)}
+        {/* On narrower screens the options sit above; this bar stays in view while scrolling through the pages. */}
+        <div className="sticky top-20 z-10 mx-auto mb-4 flex max-w-[860px] items-center justify-between gap-3 rounded-full bg-white/95 px-4 py-2 shadow-[var(--shadow-card)] backdrop-blur print:hidden xl:hidden">
+          <span className="text-sm font-semibold">
+            {TEMPLATES.find((t) => t.id === tpl)?.name} · {total} {total === 1 ? "page" : "pages"}
+          </span>
+          <span className="flex gap-2">
+            <button type="button" className="btn btn-ghost !min-h-9 !px-3 !py-1 text-sm" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+              Options
+            </button>
+            <button type="button" className="btn btn-primary !min-h-9 !px-3 !py-1 text-sm" onClick={() => window.print()}>
+              PDF
+            </button>
+          </span>
+        </div>
+        <div className="overflow-x-auto pb-2">
+          <div className="relative mx-auto grid min-w-[560px] max-w-[860px] gap-6">
+            {measure}
+            {sheets(false)}
+          </div>
         </div>
       </div>
       {mounted && createPortal(<div className="print-root">{sheets(true)}</div>, document.body)}

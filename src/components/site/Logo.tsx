@@ -30,13 +30,47 @@ export function LogoMark({ size = 36, tone = "dark", animate = false, className 
   );
 }
 
-export default function Logo({ tone = "dark", full = false }: { tone?: "dark" | "light"; full?: boolean }) {
+/** How the mark and the name sit together. "short" is the mark with GRAAS only. */
+export type Lockup = "short" | "stack" | "split" | "name";
+/** The lockup used in the site header (and wherever `brand` is asked for). Chosen by Sagar. */
+export const BRAND_LOCKUP: Lockup = "short";
+
+export default function Logo({ tone = "dark", full = false, lockup, brand = false }: { tone?: "dark" | "light"; full?: boolean; lockup?: Lockup; brand?: boolean }) {
+  const v: Lockup = lockup ?? (brand ? BRAND_LOCKUP : full ? "stack" : "short");
+  const ink = tone === "light" ? "text-white" : "text-ink";
+  const sub = tone === "light" ? "text-white/75" : "text-slate7";
+  if (v === "split")
+    return (
+      <span className="inline-flex items-center gap-2.5">
+        <LogoMark size={44} tone={tone} />
+        <span className={`text-[1.45rem] font-bold tracking-[0.04em] ${ink}`}>GRAAS</span>
+        <span className={`h-9 w-px ${tone === "light" ? "bg-white/30" : "bg-line"}`} aria-hidden="true" />
+        <span className={`flex flex-col text-[0.7rem] font-semibold leading-[1.2] sm:text-[0.76rem] ${sub}`}>
+          <span>Global Robotics And</span>
+          <span>Automation Society</span>
+        </span>
+      </span>
+    );
+  if (v === "name")
+    return (
+      <span className="inline-flex items-center gap-2.5">
+        <LogoMark size={44} tone={tone} />
+        <span className="flex flex-col">
+          <span className={`text-[0.9rem] font-bold leading-[1.15] sm:text-[1rem] ${ink}`}>
+            Global Robotics And
+            <br />
+            Automation Society
+          </span>
+          <span className={`mt-0.5 text-[0.66rem] font-semibold tracking-[0.22em] ${tone === "light" ? "text-[#7fe0a0]" : "text-go-deep"}`}>GRAAS</span>
+        </span>
+      </span>
+    );
   return (
     <span className="inline-flex items-center gap-2.5">
       <LogoMark size={46} tone={tone} />
       <span className="flex flex-col leading-none">
-        <span className={`text-[1.5rem] font-bold tracking-[0.04em] ${tone === "light" ? "text-white" : "text-ink"}`}>GRAAS</span>
-        {full && <span className={`mt-1 text-[0.7rem] font-medium tracking-wide ${tone === "light" ? "text-white/70" : "text-slate7"}`}>Global Robotics And Automation Society</span>}
+        <span className={`text-[1.5rem] font-bold tracking-[0.04em] ${ink}`}>GRAAS</span>
+        {v === "stack" && <span className={`mt-1 text-[0.62rem] font-medium tracking-wide sm:text-[0.7rem] ${sub}`}>Global Robotics And Automation Society</span>}
       </span>
     </span>
   );

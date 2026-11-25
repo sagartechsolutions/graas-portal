@@ -55,7 +55,14 @@ export default function VerifyApp() {
           {res?.found && t && (
             <div className="card mt-8 overflow-hidden shadow-[var(--shadow-card)]">
               <div className="flex items-center justify-between gap-4 bg-ink p-6 text-white">
-                <LogoMark size={44} tone="light" />
+                <span className="flex items-center gap-3">
+                  <LogoMark size={44} tone="light" />
+                  <span className="hidden text-sm font-medium leading-tight text-white/80 sm:block">
+                    Global Robotics And
+                    <br />
+                    Automation Society
+                  </span>
+                </span>
                 <span className={`rounded-full px-3 py-1 text-sm font-semibold ${t.cls}`}>{t.label}</span>
               </div>
               <dl className="grid gap-4 p-6 sm:grid-cols-2">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LiveNumbers from "@/components/about/LiveNumbers";
 import Climb from "@/components/home/Climb";
 import JoinBand from "@/components/home/JoinBand";
 import { FeatureGrid, LinkCard, PageHero, SectionHead } from "@/components/sections/Blocks";
@@ -35,6 +36,8 @@ export default async function Page() {
           { icon: "shield", title: "Verified members", text: "QR-checked IDs and certificates" },
         ]}
       />
+
+      <LiveNumbers />
 
       <section className="section bg-mist">
         <div className="shell grid gap-8 lg:grid-cols-2 lg:gap-12">

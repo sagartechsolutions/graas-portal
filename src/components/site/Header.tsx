@@ -55,7 +55,7 @@ export default function Header() {
 
   const here = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
   const item = (href: string) =>
-    `relative rounded-full px-2.5 py-2 text-[0.92rem] font-medium transition-colors hover:bg-mist 2xl:px-3.5 2xl:text-[0.95rem] ${here(href) ? "text-ink" : "text-ink2 hover:text-ink"}`;
+    `relative rounded-full px-2 py-2 text-[0.92rem] font-medium transition-colors hover:bg-mist min-[1500px]:px-2.5 min-[1760px]:px-3.5 min-[1760px]:text-[0.95rem] ${here(href) ? "text-ink" : "text-ink2 hover:text-ink"}`;
   const inMore = PROGRAMS.some((p) => here(p.href));
 
   return (
@@ -67,7 +67,7 @@ export default function Header() {
       >
         <div className="shell flex h-[4.5rem] items-center justify-between gap-4">
           <Link href="/" aria-label="GRAAS home" className="shrink-0">
-            <Logo />
+            <Logo brand />
           </Link>
           <nav aria-label="Main" className={`hidden items-center gap-0 ${staffArea ? "" : "min-[1360px]:flex"}`}>
             {NAV.map((n) => (
@@ -107,8 +107,8 @@ export default function Header() {
                 </Link>
                 {!signedIn && (
                   <Link href="/join" className="btn btn-primary hidden whitespace-nowrap !min-h-11 !px-5 sm:inline-flex">
-                    <span className="2xl:hidden">Join</span>
-                    <span className="hidden 2xl:inline">Become a member</span>
+                    <span className="min-[1760px]:hidden">Join</span>
+                    <span className="hidden min-[1760px]:inline">Become a member</span>
                   </Link>
                 )}
               </>

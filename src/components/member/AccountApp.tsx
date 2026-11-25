@@ -1163,7 +1163,7 @@ function FirstPassword({ a, done }: { a: Account; done: () => void }) {
     <section className="bg-mist">
       <div className="mx-auto w-full max-w-xl px-5 py-10 sm:py-14">
         <div className="flex items-center gap-3">
-          <Logo />
+          <Logo brand />
         </div>
         <h1 className="h-section mt-6">Welcome, {String(a.profile.full_name ?? "").split(" ")[0] || "member"}.</h1>
         <p className="lede mt-3">
@@ -1519,7 +1519,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           {current === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
           {current === "career" && m && <CareerProfile a={a} goDetails={() => open("profile")} />}
           {current === "resume" && m && <Resume a={a} goDocuments={() => open("documents")} />}
-          {current === "documents" && m && <Documents a={a} goPublic={() => open(hasId ? "home" : "overview")} />}
+          {current === "documents" && m && <Documents a={a} goPublic={() => open(hasId ? "home" : "overview")} goResume={orgMember ? undefined : () => open("resume")} />}
           {current === "events" && <MemberEvents a={a} />}
           {current === "host" && m && <HostSession a={a} school={school} />}
           {current === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => open("career")} />)}

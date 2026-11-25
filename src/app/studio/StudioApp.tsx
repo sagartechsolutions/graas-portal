@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { SKILLS } from "@/lib/suggest";
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -44,7 +45,7 @@ export function ExpertFields({ f, set, bad }: { f: any; set: (k: string, v: any)
       </label>
       <div className="grid gap-1.5 font-medium">
         Topics you can teach
-        <Tags value={f.expertise ?? []} onChange={(v) => set("expertise", v)} ph="PLC, robot safety, machine vision… (press Enter)" max={12} />
+        <Tags value={f.expertise ?? []} onChange={(v) => set("expertise", v)} ph="PLC, robot safety, machine vision… (press Enter)" max={12} suggest={SKILLS} />
       </div>
     </>
   );
