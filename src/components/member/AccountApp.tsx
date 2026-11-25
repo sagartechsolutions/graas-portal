@@ -1455,7 +1455,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
     <section className="min-h-[70vh] bg-mist">
       <div className="shell grid gap-6 py-6 lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:py-8">
         <aside className="print:hidden">
-          <div className="grid gap-4 lg:sticky lg:top-24">
+          <div className="side-lock grid content-start gap-4 pb-4">
             <MiniCard a={a} state={state} onOpen={() => open(hasId ? "home" : "overview")} />
             <nav aria-label="Account sections" className="hidden gap-4 lg:grid">
               {groups.map((g) => (

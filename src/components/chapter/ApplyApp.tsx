@@ -199,7 +199,7 @@ export default function ApplyApp({ freeSeats, minMembers, open }: { freeSeats: n
             </button>
           </form>
         </div>
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside className="side-lock">
           <div className="rounded-[24px] bg-ink p-6 text-white sm:p-8">
             <p className="text-sm font-medium text-white/60">Three steps</p>
             <ol className="mt-4 grid gap-4">

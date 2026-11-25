@@ -397,7 +397,7 @@ export default function CareerProfile({ a, goDetails }: { a: any; goDetails: () 
         </div>
       </div>
 
-      <aside className="grid content-start gap-4 lg:sticky lg:top-24 lg:self-start">
+      <aside className="side-lock grid content-start gap-4">
         <div className="card p-5">
           <p className="text-sm font-semibold text-ink2">Profile strength</p>
           <p className="mt-1 text-3xl font-semibold tracking-tight">{s.pct}%</p>

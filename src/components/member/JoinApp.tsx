@@ -292,7 +292,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
           </form>
         </div>
 
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside className="side-lock">
           <div className="rounded-[24px] bg-ink p-6 text-white sm:p-8">
             <p className="text-sm font-medium text-white/60">You are applying for</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{plan.name} membership</p>

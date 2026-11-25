@@ -113,7 +113,7 @@ export default function HostSession({ a, school }: { a: any; school?: boolean })
         {showForm && <Form p={p} x={x} onDone={() => (setEdit(false), load())} onCancel={x ? () => setEdit(false) : undefined} />}
       </div>
 
-      <aside className="grid content-start gap-4 xl:sticky xl:top-24 xl:self-start">
+      <aside className="side-lock-xl grid content-start gap-4">
         <div className="card grid gap-4 p-5">
           <p className="font-semibold">What you can host</p>
           <ul className="grid gap-3">

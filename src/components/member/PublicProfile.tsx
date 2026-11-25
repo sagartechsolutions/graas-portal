@@ -242,7 +242,7 @@ export default function PublicProfile({ no }: { no: string }) {
           )}
         </div>
 
-        <aside className="grid content-start gap-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="side-lock grid content-start gap-4">
           <div className="card grid justify-items-center gap-3 p-6 text-center">
             <Qr value={url} size={150} />
             <p className="readout text-sm">{r.member_no}</p>

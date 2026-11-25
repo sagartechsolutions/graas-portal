@@ -473,3 +473,14 @@ input[type="range"].jog::-moz-range-thumb {
   html.print-flow .resume-print-page:last-child { break-after: auto; page-break-after: auto; }
   html.print-flow .resume-print-page .cert-sheet { width: 210mm !important; height: 297mm !important; }
 }
+
+/* Locked side panels: menus and side cards stay in place while the page scrolls. When a panel is taller than the
+   screen it scrolls inside itself, so its last items are always reachable. lg = 1024 px, xl = 1280 px. */
+@media (min-width: 1024px) {
+  .side-lock { position: sticky; top: 5.5rem; align-self: start; max-height: calc(100vh - 6.5rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c9ccd2 transparent; padding-right: 0.25rem; }
+}
+@media (min-width: 1280px) {
+  .side-lock-xl { position: sticky; top: 5.5rem; align-self: start; max-height: calc(100vh - 6.5rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c9ccd2 transparent; padding-right: 0.25rem; }
+}
+.side-lock::-webkit-scrollbar, .side-lock-xl::-webkit-scrollbar { width: 6px; }
+.side-lock::-webkit-scrollbar-thumb, .side-lock-xl::-webkit-scrollbar-thumb { background: #c9ccd2; border-radius: 999px; }

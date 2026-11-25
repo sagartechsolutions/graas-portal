@@ -676,7 +676,7 @@ export default function AdminApp() {
               ))}
             </select>
           </label>
-          <div className="sticky top-24 hidden gap-5 lg:grid">
+          <div className="side-lock hidden content-start gap-5 pb-4 lg:grid">
             {groups.map((g) => (
               <div key={g.title}>
                 <p className="px-3 text-xs font-semibold text-ink2">{g.title}</p>

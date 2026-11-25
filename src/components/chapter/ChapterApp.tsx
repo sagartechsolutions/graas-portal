@@ -949,7 +949,7 @@ export default function ChapterApp() {
 
         {c && (c.status === "approved" || c.status === "suspended") && (
           <>
-            <div role="tablist" className="flex gap-1 overflow-x-auto rounded-full bg-white p-1 shadow-[var(--shadow-card)] print:hidden sm:w-fit">
+            <div role="tablist" className="sticky top-[5rem] z-20 flex gap-1 overflow-x-auto rounded-full bg-white p-1 shadow-[var(--shadow-card)] print:hidden sm:w-fit">
               {[
                 ["overview", "Overview"],
                 ["students", "Students"],

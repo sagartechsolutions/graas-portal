@@ -26,7 +26,7 @@ export default async function PolicyArticle({ slug }: { slug: string }) {
           <PolicyBody body={p.body} />
         </div>
       </article>
-      <aside className="lg:sticky lg:top-28 lg:self-start">
+      <aside className="side-lock">
         <p className="text-sm font-semibold text-ink2">All policies</p>
         <ul className="mt-3 grid gap-1">
           {all.map((x) => (

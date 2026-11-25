@@ -230,7 +230,7 @@ export default function ProfileHome({ a, state, go }: { a: any; state: string; g
           </div>
         </div>
 
-        <aside className="grid content-start gap-4 xl:sticky xl:top-24 xl:self-start">
+        <aside className="side-lock-xl grid content-start gap-4">
           <section id="public-profile" className="card grid gap-4 p-5">
             <div>
               <h3 className="font-semibold">Public profile and QR</h3>

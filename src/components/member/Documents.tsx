@@ -343,7 +343,7 @@ export default function Documents({ a, goPublic, goResume }: { a: any; goPublic?
           )}
         </section>
       </div>
-      <aside className="grid content-start gap-4 xl:sticky xl:top-24 xl:self-start">
+      <aside className="side-lock-xl grid content-start gap-4">
         <div className="card grid gap-3 p-5">
           <p className="text-sm font-semibold text-ink2">Your documents</p>
           <div className="grid grid-cols-3 gap-2 text-center">

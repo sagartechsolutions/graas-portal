@@ -53,7 +53,7 @@ async function Detail({ params }: Pick<PageProps<"/opportunities/[ref]">, "param
             </div>
           </div>
         </div>
-        <aside className="grid content-start gap-4 lg:sticky lg:top-24 lg:self-start">
+        <aside className="side-lock grid content-start gap-4">
           <div className="card p-6">
             <ApplyCta refNo={o.ref} open={!!o.open} />
           </div>
