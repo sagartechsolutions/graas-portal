@@ -6,6 +6,7 @@ import { portal } from "@/lib/browser";
 import { STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
 import { usePhoto } from "@/components/member/Details";
 import { Badge, Msg, STATUS_TONE, downloadCsv, istToday, lbl, sb, small } from "./shared";
+import { AddMember, EditMember } from "./Manage";
 
 type Row = { id: string; user_id: string; status: string; member_no: string | null; organisation: string | null; applied_at: string; approved_at: string | null; activated_at: string | null; starts_on: string | null; ends_on: string | null; is_complimentary: boolean; staff_note: string | null; decision_reason: string | null; profile: any; plan: any };
 
@@ -103,6 +104,7 @@ function Detail({ row, role, today, onBack, onChanged }: { row: Row; role: strin
         {row.is_complimentary && <Badge>No fee charged</Badge>}
       </div>
       {msg && <Msg tone={msg.tone}>{msg.text}</Msg>}
+      <EditMember userId={row.user_id} p={p} onDone={(t) => { setMsg({ tone: "good", text: t }); onChanged(); }} />
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="plate p-5">
           <h4 className="font-semibold">Person</h4>
@@ -249,6 +251,8 @@ export function Members({ role }: { role: string }) {
   const [gender, setGender] = useState("");
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState("");
   const today = useMemo(() => istToday(), []);
   const soon = useMemo(() => new Date(new Date(today).getTime() + 30 * 86400000).toISOString().slice(0, 10), [today]);
 
@@ -288,9 +292,29 @@ export function Members({ role }: { role: string }) {
 
   const open = rows.find((r) => r.id === openId);
   if (open) return <Detail key={open.id} row={open} role={role} today={today} onBack={() => setOpenId(null)} onChanged={load} />;
+  if (adding)
+    return (
+      <AddMember
+        role={role}
+        onCancel={() => setAdding(false)}
+        onDone={(t) => {
+          setAdding(false);
+          setAdded(t);
+          load();
+        }}
+      />
+    );
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {added ? <Msg tone="good">{added}</Msg> : <span />}
+        {(role === "super_admin" || role === "membership_desk") && (
+          <button type="button" className="btn-go" onClick={() => setAdding(true)}>
+            Add a member
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2">
         {FILTERS.map(([id, label]) => {
           const n = rows.filter((r) => match(r, id)).length;

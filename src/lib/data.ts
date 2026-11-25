@@ -236,3 +236,28 @@ export async function getOpportunity(ref: string): Promise<any | null> {
     return null;
   }
 }
+
+/** Approved events for the public pages: upcoming and the last few months. */
+export async function getEvents(): Promise<any[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("events");
+  try {
+    const { data } = await publicClient().rpc("public_events");
+    return (data ?? []) as any[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getEvent(ref: string): Promise<any | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("events");
+  try {
+    const { data } = await publicClient().rpc("public_event", { p_ref: ref });
+    return (data as any) ?? null;
+  } catch {
+    return null;
+  }
+}

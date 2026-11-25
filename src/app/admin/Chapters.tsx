@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { portal } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
 import { Badge, Msg, downloadCsv, lbl, sb, small, type Tone } from "./shared";
+import { ChapterAdd, ChapterManage } from "./Manage";
 
 const STATUS: Record<string, [string, Tone]> = {
   draft: ["Being prepared", "plain"],
@@ -92,6 +93,8 @@ function Chapter({ c, onBack, onChanged }: { c: any; onBack: () => void; onChang
       <button type="button" className="link justify-self-start text-sm" onClick={onBack}>
         Back to all chapters
       </button>
+      {c.removed_at && <Msg tone="bad">This chapter was removed on {shortDate(String(c.removed_at).slice(0, 10))}. Restore it to work with it again.</Msg>}
+      <ChapterManage c={c} onChanged={() => onChanged()} />
       <div className="plate grid gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -294,6 +297,8 @@ export function Chapters() {
   const [tab, setTab] = useState("submitted");
   const [open, setOpen] = useState<any | null>(null);
   const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addedMsg, setAddedMsg] = useState("");
   const load = useCallback(async () => {
     const { data } = await sb().from("chapters").select("*").order("created_at", { ascending: false });
     setList(data ?? []);
@@ -313,8 +318,9 @@ export function Chapters() {
   }, [load]);
   if (open) {
     const fresh = list.find((x) => x.id === open.id) ?? open;
-    return <Chapter key={fresh.id + fresh.status + fresh.free_seats + fresh.valid_until} c={fresh} onBack={() => setOpen(null)} onChanged={load} />;
+    return <Chapter key={fresh.id + fresh.status + fresh.free_seats + fresh.valid_until + (fresh.removed_at ?? "") + fresh.head_user} c={fresh} onBack={() => setOpen(null)} onChanged={load} />;
   }
+  if (adding) return <ChapterAdd onCancel={() => setAdding(false)} onDone={(t) => { setAdding(false); setAddedMsg(t); setTab("draft"); load(); }} />;
   const tabs: [string, string][] = [
     ["submitted", "Waiting for approval"],
     ["students", "Approved, students waiting"],
@@ -322,9 +328,10 @@ export function Chapters() {
     ["draft", "Being prepared"],
     ["rejected", "Sent back"],
     ["suspended", "Suspended"],
+    ["removed", "Removed"],
   ];
   const shown = list.filter((c) => {
-    const inTab = tab === "students" ? c.status === "approved" && (counts[c.id]?.waiting ?? 0) > 0 : c.status === tab;
+    const inTab = tab === "removed" ? !!c.removed_at : c.removed_at ? false : tab === "students" ? c.status === "approved" && (counts[c.id]?.waiting ?? 0) > 0 : c.status === tab;
     return inTab && (!q || `${c.institution} ${c.code ?? ""} ${c.city ?? ""} ${c.head_name ?? ""}`.toLowerCase().includes(q.toLowerCase()));
   });
   return (
@@ -334,7 +341,7 @@ export function Chapters() {
       </p>
       <div className="flex flex-wrap gap-2">
         {tabs.map(([id, t]) => {
-          const n = id === "students" ? list.filter((c) => c.status === "approved" && (counts[c.id]?.waiting ?? 0) > 0).length : list.filter((c) => c.status === id).length;
+          const n = id === "removed" ? list.filter((c) => c.removed_at).length : id === "students" ? list.filter((c) => !c.removed_at && c.status === "approved" && (counts[c.id]?.waiting ?? 0) > 0).length : list.filter((c) => !c.removed_at && c.status === id).length;
           return (
             <button key={id} type="button" onClick={() => setTab(id)} className={`rounded-full px-4 py-2 text-sm font-semibold ${tab === id ? "bg-ink text-white" : "bg-mist text-ink2 hover:text-ink"}`}>
               {t} ({n})
@@ -342,7 +349,13 @@ export function Chapters() {
           );
         })}
       </div>
-      <input className="field max-w-sm" placeholder="Search institution, number, city or coordinator" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-3">
+        <input className="field max-w-sm" placeholder="Search institution, number, city or coordinator" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="btn-go ml-auto" onClick={() => setAdding(true)}>
+          Open a chapter
+        </button>
+      </div>
+      {addedMsg && <Msg tone="good">{addedMsg}</Msg>}
       {shown.length === 0 && <p className="text-ink2">Nothing here.</p>}
       <ul className="grid gap-3">
         {shown.map((c) => (

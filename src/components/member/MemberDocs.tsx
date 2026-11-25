@@ -763,3 +763,107 @@ export function PledgeCertificate(props: DocProps & { pledge: { title: string; i
     </div>
   );
 }
+
+/* ---------- Participation certificate (A4 landscape), for attendees of GRAAS events ---------- */
+
+export function ParticipationCertificate({ name, memberNo, e, regId, photo }: { name: string; memberNo?: string | null; e: any; regId: string; photo?: { id: string; stamp: string | null } }) {
+  const f = certFrame();
+  const origin = typeof window === "undefined" ? "https://graas.org.in" : window.location.origin;
+  const url = memberNo ? `${origin}/verify?id=${memberNo}` : `${origin}/events/${String(e.ref).toLowerCase()}`;
+  const k = { fontSize: mu(2.35), color: "#5a616b" } as const;
+  const day = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" }).format(new Date(e.starts_at));
+  const certNo = `GRAAS-PC-${regId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  const img = usePhoto(photo?.id, photo?.stamp);
+  return (
+    <div className="overflow-x-auto pb-2">
+      <style>{"@media print { @page { size: A4 landscape; margin: 0; } }"}</style>
+      <div className="print-area print-cert min-w-[720px]">
+        <div style={{ containerType: "inline-size" }}>
+          <div className="cert-sheet relative aspect-[297/210] w-full overflow-hidden bg-white text-ink shadow-[var(--shadow-card)] ring-1 ring-line">
+            <svg viewBox="0 0 297 210" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+              <path d={f.bg} fill="none" stroke={INK} strokeWidth="0.12" opacity="0.08" />
+              <rect x="7" y="7" width="283" height="196" fill="none" stroke={INK} strokeWidth="0.6" />
+              <path d={f.bands} fill="none" stroke="#5a616b" strokeWidth="0.22" />
+              <rect x="16" y="16" width="265" height="178" fill="none" stroke={INK} strokeWidth="0.35" />
+              <rect x="17.4" y="17.4" width="262.2" height="175.2" fill="none" stroke="#02ae3e" strokeWidth="0.3" />
+              {[[11.5, 11.5], [285.5, 11.5], [11.5, 198.5], [285.5, 198.5]].map(([x, y]) => (
+                <g key={`${x}-${y}`}>
+                  <circle cx={x} cy={y} r="5" fill="#fff" stroke={INK} strokeWidth="0.35" />
+                  <circle cx={x} cy={y} r="1" fill="#02ae3e" />
+                </g>
+              ))}
+              <path d={f.corners} fill="none" stroke={INK} strokeWidth="0.18" />
+            </svg>
+            <div className="absolute bg-white" style={{ left: mu(25), top: mu(25), width: mu(54), border: `${mu(0.3)} solid ${INK}` }}>
+              <div style={{ padding: `${mu(1.6)} ${mu(2.4)}`, borderBottom: `${mu(0.25)} solid #e2e4e9` }}>
+                <p style={k}>Certificate number</p>
+                <p className="readout font-medium" style={{ fontSize: mu(3.1) }}>
+                  {certNo}
+                </p>
+              </div>
+              <div style={{ padding: `${mu(1.6)} ${mu(2.4)}` }}>
+                <p style={k}>{memberNo ? "Membership number" : "Event"}</p>
+                <p className="readout font-medium" style={{ fontSize: mu(3.1) }}>
+                  {memberNo ?? e.ref}
+                </p>
+              </div>
+            </div>
+            {photo && (
+              <div className="absolute bg-white" style={{ right: mu(25), top: mu(22), width: mu(27), height: mu(33), border: `${mu(0.35)} solid ${INK}`, padding: mu(1.1) }}>
+                <Portrait url={img} name={name} org={false} style={{ width: "100%", height: "100%", fontSize: mu(9) }} />
+              </div>
+            )}
+            <div className="absolute inset-x-0 text-center" style={{ top: mu(23) }}>
+              <Lockup u={mu} scale={1.45} />
+              <div className="flex items-center justify-center" style={{ gap: mu(2), marginTop: mu(4) }}>
+                <span style={{ width: mu(24), height: mu(0.25), background: "#b7babf" }} />
+                <span className="rounded-full bg-go" style={{ width: mu(1.8), height: mu(1.8) }} />
+                <span style={{ width: mu(24), height: mu(0.25), background: "#b7babf" }} />
+              </div>
+            </div>
+            <div className="absolute inset-x-0 text-center" style={{ top: mu(58), fontFamily: SERIF }}>
+              <h2 className="font-semibold" style={{ fontSize: mu(12), letterSpacing: "-0.01em", lineHeight: 1 }}>
+                Certificate of Participation
+              </h2>
+              <p className="italic text-ink2" style={{ fontSize: mu(4.6), marginTop: mu(7) }}>
+                This is to certify that
+              </p>
+              <p className="mx-auto font-semibold" style={{ fontSize: mu(name.length > 34 ? 8.5 : 11), marginTop: mu(3), lineHeight: 1.05, maxWidth: mu(205) }}>
+                {name}
+              </p>
+              <div className="mx-auto bg-ink" style={{ width: mu(150), height: mu(0.3), marginTop: mu(3.2) }} />
+              <p className="mx-auto text-ink2" style={{ fontSize: mu(4.3), lineHeight: 1.5, width: mu(210), marginTop: mu(4.5) }}>
+                participated in the {String(e.kind_label ?? "event").toLowerCase()} <b className="font-semibold text-ink">{e.title}</b>, held {e.mode === "online" ? "online" : `at ${[e.venue, e.city].filter(Boolean).join(", ")}`} on{" "}
+                <b className="font-semibold text-ink">{day}</b>, organised by {e.host?.name && e.host.name !== "GRAAS" ? `${e.host.name} with ` : ""}the Global Robotics And Automation Society.
+              </p>
+              {e.speaker_name && (
+                <p className="font-medium" style={{ fontFamily: "var(--font-sans)", fontSize: mu(3.4), marginTop: mu(3.2) }}>
+                  {e.kind === "competition" ? "Judge" : "Speaker"}: {e.speaker_name}
+                  {e.speaker_title ? `, ${e.speaker_title}` : ""}
+                </p>
+              )}
+            </div>
+            <RobotArm sw={1.9} style={{ position: "absolute", left: mu(21), bottom: mu(19.6), width: mu(62) }} />
+            <div className="absolute inset-x-0 text-center" style={{ bottom: mu(20) }}>
+              <Seal id={`seal-pc-${regId}`} style={{ width: mu(38), height: mu(38), display: "block", margin: "0 auto" }} />
+              <p className="text-slate7" style={{ fontSize: mu(2.5), marginTop: mu(1.2) }}>
+                Issued digitally by the Global Robotics And Automation Society
+              </p>
+            </div>
+            <div className="absolute flex items-end" style={{ right: mu(25), bottom: mu(24), gap: mu(3) }}>
+              <div className="text-right" style={{ paddingBottom: mu(0.6) }}>
+                <p className="font-semibold" style={{ fontSize: mu(3) }}>
+                  Scan to verify
+                </p>
+                <p style={{ ...k, marginTop: mu(0.6) }}>
+                  graas.org.in/verify
+                </p>
+              </div>
+              <Qr value={url} size={240} style={{ width: mu(25), height: mu(25), display: "block", border: `${mu(0.25)} solid #e2e4e9` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

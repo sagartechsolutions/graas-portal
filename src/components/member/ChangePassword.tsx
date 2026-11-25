@@ -4,7 +4,7 @@ import { useState } from "react";
 import { portal } from "@/lib/browser";
 
 /** Change password for logins without a member area: staff and chapter coordinators. */
-export default function ChangePassword({ email, className = "" }: { email?: string; className?: string }) {
+export default function ChangePassword({ email, className = "", compact = false }: { email?: string; className?: string; compact?: boolean }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   async function save(e: React.FormEvent<HTMLFormElement>) {
@@ -27,7 +27,7 @@ export default function ChangePassword({ email, className = "" }: { email?: stri
         <h3 className="h-card">Login and password</h3>
         {email && <p className="text-sm text-ink2">You sign in as {email}.</p>}
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-3"}`}>
         <label className="grid gap-1 text-sm font-medium">
           Current password
           <input name="current" type="password" className="field" autoComplete="current-password" required />

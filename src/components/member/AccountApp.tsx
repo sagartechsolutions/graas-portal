@@ -17,6 +17,7 @@ import { PledgeBox, TakePledge, usePledge } from "./Pledge";
 import Resume from "./Resume";
 import MemberOpps from "@/components/opps/MemberOpps";
 import OrgOpps from "@/components/opps/OrgOpps";
+import MemberEvents from "@/components/events/MemberEvents";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
@@ -1247,7 +1248,16 @@ function Certificates({ a, org, state, go }: { a: Account; org: any; state: stri
   const cur = items.find((x) => x.id === doc)!;
   return (
     <div className="grid gap-6">
-      <div className="grid gap-3 print:hidden sm:grid-cols-3">
+      <div className="grid gap-3 print:hidden sm:grid-cols-2 xl:grid-cols-4">
+        <button type="button" onClick={() => go("events")} className="card card-lift flex items-start gap-3 p-4 text-left xl:order-last">
+          <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mist text-xs font-bold" aria-hidden="true">
+            ★
+          </span>
+          <span>
+            <b className="block font-semibold">Event certificates</b>
+            <span className="text-sm text-ink2">One for each event you attend</span>
+          </span>
+        </button>
         {items.map((x) => (
           <button key={x.id} type="button" onClick={() => setDoc(x.id)} aria-pressed={doc === x.id} className={`card card-lift flex items-start gap-3 p-4 text-left ${doc === x.id ? "ring-2 ring-ink" : ""}`}>
             <span className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${x.ready ? "bg-go text-white" : "border-2 border-slate3 text-transparent"}`} aria-hidden="true">
@@ -1397,6 +1407,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
     { id: "career", label: orgMember ? "Company page" : "Profile", show: !!m },
     { id: "resume", label: "Resume", show: !!m && !orgMember },
     { id: "opportunities", label: "Opportunities", show: !!m },
+    { id: "events", label: "Events", show: true },
     { id: "certificates", label: "Certificates", show: hasId },
     { id: "payments", label: "Payments", show: true },
     { id: "profile", label: "Account", show: true },
@@ -1449,6 +1460,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
           {tab === "career" && m && <CareerProfile a={a} goDetails={() => setTab("profile")} />}
           {tab === "resume" && m && <Resume a={a} />}
+          {tab === "events" && <MemberEvents a={a} />}
           {tab === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => setTab("career")} />)}
           {tab === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={setTab} />}
           {tab === "payments" &&
@@ -1471,7 +1483,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
                     <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line p-4">
                       <div>
                         <p className="font-semibold">
-                          {o.chapter_id ? `Chapter seats: ${o.seats} ${o.seats === 1 ? "student" : "students"}, 1 year` : o.purpose === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
+                          {o.event_id ? o.plan_name : o.chapter_id ? `Chapter seats: ${o.seats} ${o.seats === 1 ? "student" : "students"}, 1 year` : o.purpose === "change" ? `Change to ${o.plan_name} membership, ${o.term_label}` : `${o.plan_name} membership${o.term_label && o.term_label !== "1 year" ? `, ${o.term_label}` : ""}${o.kind === "renewal" ? ", renewal" : ""}`}
                         </p>
                         <p className="text-sm text-ink2">
                           {shortDate(o.paid_at ?? o.created_at)}

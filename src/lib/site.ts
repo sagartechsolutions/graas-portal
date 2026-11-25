@@ -19,6 +19,7 @@ export const NAV = [
 
 export const PROGRAMS = [
   { href: "/learn", label: "Learn", note: "Live lectures and courses" },
+  { href: "/experts", label: "Host a session", note: "For industry leaders and trainers" },
   { href: "/graascon", label: "GRAASCON", note: "The yearly conference" },
   { href: "/verify", label: "Verify a member", note: "Check a member ID or chapter" },
 ];

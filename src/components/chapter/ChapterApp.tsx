@@ -5,6 +5,8 @@ import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import HostEvents from "@/components/events/HostEvents";
+import ChangePassword from "@/components/member/ChangePassword";
 import { Receipt } from "@/components/member/AccountApp";
 import { ChapterCertificate } from "@/components/member/MemberDocs";
 import { VerifyCard } from "@/components/member/Verify";
@@ -756,6 +758,17 @@ export default function ChapterApp() {
   const [tab, setTab] = useState("overview");
   const [submitErr, setSubmitErr] = useState("");
   const [sending, setSending] = useState(false);
+  // A chapter login created or handed over by GRAAS starts with a first password from the email.
+  const [mustChange, setMustChange] = useState(false);
+  useEffect(() => {
+    if (!session) return;
+    sb()
+      .from("profiles")
+      .select("must_change_password")
+      .eq("id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setMustChange(!!data?.must_change_password));
+  }, [session]);
 
   const load = useCallback(async () => {
     const { data } = await sb().rpc("my_chapter");
@@ -802,6 +815,7 @@ export default function ChapterApp() {
       </section>
     );
   if (!d) return <div className="shell py-16 text-ink2">Loading your chapter…</div>;
+  if (mustChange) return <CoordinatorFirstPassword done={() => { setMustChange(false); reload("Your password is set. Welcome to the chapter console."); }} />;
 
   const c = d.chapter;
   const kind: "college" | "school" = c?.kind ?? (params.get("kind") === "school" ? "school" : "college");
@@ -939,6 +953,7 @@ export default function ChapterApp() {
                 ["overview", "Overview"],
                 ["students", "Students"],
                 ["add", "Add students"],
+                ["events", "Events"],
                 ["certificate", "Certificate"],
                 ["details", "Details and letter"],
               ].map(([id, t]) => (
@@ -1021,6 +1036,7 @@ export default function ChapterApp() {
                 )}
               </div>
             )}
+            {tab === "events" && <ChapterEvents />}
             {tab === "certificate" && (
               <div className="grid gap-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -1081,5 +1097,81 @@ function ChapterReceipts({ orders }: { orders: any[] }) {
       </div>
       {open && <Receipt o={{ ...open, chapter_id: open.chapter_id ?? true }} org={org} />}
     </div>
+  );
+}
+
+/** Competitions, workshops, lectures, meetups and visits the chapter announces (GRAAS approves each one). */
+function ChapterEvents() {
+  const [list, setList] = useState<any[] | null>(null);
+  const load = useCallback(async () => {
+    const { data } = await browserClient().rpc("chapter_events");
+    setList((data as any[]) ?? []);
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  if (!list) return <p className="text-ink2">Loading…</p>;
+  return (
+    <div className="grid gap-6">
+      <HostEvents mode="chapter" events={list} reload={load} />
+      <div className="card p-6">
+        <ChangePassword />
+      </div>
+    </div>
+  );
+}
+
+function CoordinatorFirstPassword({ done }: { done: () => void }) {
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function save(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const p1 = String(f.get("password") ?? ""), p2 = String(f.get("password2") ?? "");
+    if (p1.length < 8) return setErr("Use at least 8 characters.");
+    if (p1 !== p2) return setErr("The two passwords do not match.");
+    if (f.get("accept") !== "on") return setErr("Please accept the terms of use and the code of conduct.");
+    setBusy(true);
+    const r = await portal("first_password", { password: p1, accept: true });
+    setBusy(false);
+    if (!r.ok) return setErr(r.error ?? "Could not save the password.");
+    done();
+  }
+  return (
+    <section className="bg-mist">
+      <div className="mx-auto w-full max-w-xl px-5 py-14">
+        <p className="text-sm text-ink2">Chapter console</p>
+        <h1 className="h-section mt-1">Choose your password</h1>
+        <p className="lede mt-3">This login belongs to the chapter. Replace the first password from the email with one only you know.</p>
+        <form onSubmit={save} className="card mt-7 grid gap-4 p-6 sm:p-8" noValidate>
+          <label className="grid gap-1.5 font-medium">
+            New password
+            <input name="password" type="password" className="field" autoComplete="new-password" minLength={8} maxLength={72} required />
+          </label>
+          <label className="grid gap-1.5 font-medium">
+            Type it again
+            <input name="password2" type="password" className="field" autoComplete="new-password" maxLength={72} required />
+          </label>
+          <label className="flex items-start gap-3 text-[0.95rem]">
+            <input type="checkbox" name="accept" className="mt-1 h-5 w-5 accent-[#067a2e]" />
+            <span>
+              I accept the{" "}
+              <Link href="/policies/terms" target="_blank" className="font-semibold underline">
+                Terms of use
+              </Link>{" "}
+              and the{" "}
+              <Link href="/policies/code-of-conduct" target="_blank" className="font-semibold underline">
+                Code of conduct
+              </Link>
+              .
+            </span>
+          </label>
+          {err && <p className="rounded-xl bg-[#fff1ef] px-4 py-3 font-medium text-[#8f1a11]">{err}</p>}
+          <button className="btn btn-primary justify-self-start" disabled={busy}>
+            {busy ? "Saving…" : "Save and continue"}
+          </button>
+        </form>
+      </div>
+    </section>
   );
 }

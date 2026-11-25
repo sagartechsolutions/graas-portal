@@ -121,6 +121,45 @@ async function sendCode(
   return { ok: true, minutes: c.data.minutes };
 }
 
+/** Emails a login made by GRAAS staff (member, coordinator) with its first password; the log keeps "******". */
+async function sendAccountLogin(userId: string, email: string, vars: Record<string, string>) {
+  const m = await loadMessaging(admin);
+  const r = await deliver(m, "account_login", "email", email, vars);
+  await admin.rpc("svc_log_message", {
+    p_user: userId,
+    p_event: "account_login",
+    p_channel: "email",
+    p_to: email,
+    p_vars: { ...vars, password: "******" },
+    p_ok: r.ok,
+    p_provider_id: r.id ?? null,
+    p_error: r.ok ? null : r.error ?? "Not sent.",
+    p_subject: r.subject ?? null,
+    p_actor: null,
+  });
+  return r;
+}
+
+/** Finds a login that is not staff, or creates one with a first password. Staff logins are never reused for chapters. */
+async function loginFor(email: string, name: string, via: string): Promise<{ id?: string; password?: string; error?: string }> {
+  const found = (await admin.from("profiles").select("id").ilike("email", email).maybeSingle()).data;
+  if (found?.id) {
+    const staff = (await admin.from("staff_members").select("user_id").eq("user_id", found.id).maybeSingle()).data;
+    if (staff) return { error: "This email is a GRAAS staff login. Use a different email for the chapter." };
+    return { id: found.id };
+  }
+  const password = firstPassword();
+  const made = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name: name }, app_metadata: { via } });
+  const id = made.data?.user?.id;
+  if (made.error || !id) return { error: "Could not create the login." };
+  if ((await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data) {
+    await admin.auth.admin.deleteUser(id);
+    return { error: "Could not create the login." };
+  }
+  await admin.from("profiles").update({ must_change_password: true }).eq("id", id);
+  return { id, password };
+}
+
 const STAFF_ROLES = ["super_admin", "membership_desk", "chapter_manager", "event_manager", "finance", "communications", "support", "regional_coordinator", "moderator"];
 const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -185,6 +224,153 @@ Deno.serve(async (req) => {
       if (!emailReady(m)) return out({ ok: true, verify: null });
       const sent = await sendCode(m, { purpose: "verify_email", channel: "email", target: d.email, user: id, ip, event: "code_verify_email", name: firstName(d.full_name) });
       return out({ ok: true, verify: "email", sent: sent.ok, sent_to: d.email, minutes: sent.minutes ?? 10 });
+    }
+
+    case "expert_signup": {
+      // An industry leader or trainer who wants to host sessions. A GRAAS membership is not needed to be an expert.
+      if (b.website_hp) return fail("Could not create the account. Please try again.");
+      const d = {
+        full_name: text(b.full_name, 80),
+        email: text(b.email, 160).toLowerCase(),
+        phone: mobile(b.phone),
+        headline: text(b.headline, 160),
+        bio: text(b.bio, 2000),
+        expertise: Array.isArray(b.expertise) ? b.expertise.map((x: unknown) => text(x, 40)).slice(0, 12) : [],
+        organisation: text(b.organisation, 120),
+        designation: text(b.designation, 120),
+        linkedin: text(b.linkedin, 200),
+        website: text(b.website, 200),
+        accept: b.accept === true,
+      };
+      const password = String(b.password ?? "");
+      if (password.length < 8 || password.length > 72) return fail("Choose a password of at least 8 characters.", { field: "password" });
+      const chk = await admin.rpc("svc_expert_check", { p: d });
+      if (chk.error) return fail("Could not check the details. Please try again.");
+      if (!chk.data?.ok) return out(chk.data);
+      const made = await admin.auth.admin.createUser({
+        email: d.email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: d.full_name },
+        app_metadata: { via: "expert_signup" },
+      });
+      const id = made.data?.user?.id;
+      if (made.error || !id) {
+        const dup = /already|registered|exists/i.test(made.error?.message ?? "");
+        return fail(dup ? "An account with this email already exists. Sign in, then open the Expert studio." : "Could not create the account. Please try again.", { field: "email" });
+      }
+      const leaked = (await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data;
+      const done = leaked ? null : await admin.rpc("svc_expert_signup", { p_user: id, p: d });
+      if (!done || done.error || !done.data?.ok) {
+        await admin.auth.admin.deleteUser(id);
+        return fail("Could not create the account. Please try again.");
+      }
+      const m = await loadMessaging(admin);
+      if (!emailReady(m)) return out({ ok: true, verify: null });
+      const sent = await sendCode(m, { purpose: "verify_email", channel: "email", target: d.email, user: id, ip: await ipHash(), event: "code_verify_email", name: firstName(d.full_name) });
+      return out({ ok: true, verify: "email", sent: sent.ok, sent_to: d.email, minutes: sent.minutes ?? 10 });
+    }
+
+    case "admin_member_create": {
+      // Staff add a member: a login with a first password, the membership, and (super admin only) activation without payment.
+      if (!is("membership_desk")) return fail("Your role cannot add members.");
+      const d = {
+        plan_code: text(b.plan_code, 60),
+        full_name: text(b.full_name, 80),
+        email: normEmail(b.email),
+        phone: mobile(b.phone),
+        city: text(b.city, 80),
+        state: text(b.state, 60),
+        organisation: text(b.organisation, 120),
+        designation: text(b.designation, 120),
+      };
+      if (d.full_name.length < 3) return fail("Enter the full name.", { field: "full_name" });
+      if (!isEmail(d.email)) return fail("Enter a valid email address.", { field: "email" });
+      if (d.phone && !isMobile(d.phone)) return fail("Enter a 10-digit mobile number.", { field: "phone" });
+      if ((await admin.from("profiles").select("id").ilike("email", d.email).maybeSingle()).data) return fail("A GRAAS login with this email already exists. Find it under Members.", { field: "email" });
+      const free = b.complimentary === true;
+      if (free && role !== "super_admin") return fail("Only a super admin can activate a membership without payment.");
+      if (free && text(b.reason, 300).length < 3) return fail("Record why this membership is free of charge.", { field: "reason" });
+      const password = firstPassword();
+      const made = await admin.auth.admin.createUser({ email: d.email, password, email_confirm: true, user_metadata: { full_name: d.full_name }, app_metadata: { via: "admin_created" } });
+      const id = made.data?.user?.id;
+      if (made.error || !id) return fail("Could not create the login.", { field: "email" });
+      if ((await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data) {
+        await admin.auth.admin.deleteUser(id);
+        return fail("Could not create the login.");
+      }
+      const done = await admin.rpc("svc_admin_member_create", { p_user: id, p: d, p_actor: user.id });
+      if (done.error || !done.data?.ok) {
+        await admin.auth.admin.deleteUser(id);
+        return out(done.data ?? { ok: false, error: "Could not create the membership." });
+      }
+      let active = done.data.status === "active";
+      if (free && !active) {
+        const c = await asUser().rpc("staff_membership_action", { p_id: done.data.membership_id, p_action: "complimentary", p_note: text(b.reason, 300), p_months: null });
+        active = !!c.data?.ok;
+      }
+      const sent = await sendAccountLogin(id, d.email, {
+        name: firstName(d.full_name),
+        intro: `GRAAS has created your ${done.data.plan} membership account.`,
+        login: d.email,
+        password,
+        next_step: active ? "Your membership is active. After you sign in, take the member pledge and add your photo to get your certificates." : "After you sign in, pay the membership fee from your account to activate it.",
+        link: "https://graas.org.in/signin",
+      });
+      return out({ ok: true, active, emailed: sent.ok, sent_to: maskEmail(d.email) });
+    }
+
+    case "admin_chapter_create":
+    case "admin_chapter_transfer": {
+      // Staff open a chapter for a college or school, or hand a chapter to a new coordinator. The login belongs to the chapter.
+      if (!is("chapter_manager")) return fail("Your role cannot do this.");
+      const d = {
+        kind: text(b.kind, 10),
+        institution: text(b.institution, 160),
+        branch: text(b.branch, 80),
+        branch_other: text(b.branch_other, 80),
+        city: text(b.city, 80),
+        state: text(b.state, 60),
+        principal_name: text(b.principal_name, 120),
+        head_name: text(b.head_name, 80),
+        head_email: normEmail(b.head_email),
+        head_phone: mobile(b.head_phone),
+        head_designation: text(b.head_designation, 120),
+        head_department: text(b.head_department, 120),
+        reason: text(b.reason, 300),
+      };
+      if (d.head_name.length < 3) return fail("Enter the coordinator's full name.", { field: "head_name" });
+      if (!isEmail(d.head_email)) return fail("Enter the coordinator's email.", { field: "head_email" });
+      if (d.head_phone && !isMobile(d.head_phone)) return fail("Enter a 10-digit mobile number.", { field: "head_phone" });
+      const lg = await loginFor(d.head_email, d.head_name, b.action === "admin_chapter_create" ? "admin_created" : "chapter_transfer");
+      if (!lg.id) return fail(lg.error ?? "Could not set up the login.", { field: "head_email" });
+      const r =
+        b.action === "admin_chapter_create"
+          ? await admin.rpc("svc_chapter_create", { p_head: lg.id, p: d, p_actor: user.id })
+          : await admin.rpc("svc_chapter_transfer", { p_chapter: String(b.chapter_id ?? ""), p_head: lg.id, p: d, p_actor: user.id });
+      if (r.error || !r.data?.ok) {
+        if (lg.password) await admin.auth.admin.deleteUser(lg.id);
+        return out(r.data ?? { ok: false, error: "Could not save." });
+      }
+      if (d.head_phone) await admin.from("profiles").update({ phone: d.head_phone }).eq("id", lg.id).is("phone", null);
+      const label = String(r.data.label ?? "your chapter");
+      let sent: Sent;
+      if (lg.password) {
+        sent = await sendAccountLogin(lg.id, d.head_email, {
+          name: firstName(d.head_name),
+          intro: b.action === "admin_chapter_create" ? `GRAAS has opened **${label}** and made you its coordinator.` : `GRAAS has made you the new coordinator of **${label}**.`,
+          login: d.head_email,
+          password: lg.password,
+          next_step: "After you sign in, open the chapter console: complete the chapter details, upload the principal's letter and add the students.",
+          link: "https://graas.org.in/chapter",
+        });
+      } else {
+        const m = await loadMessaging(admin);
+        const vars = { name: firstName(d.head_name), chapter: label, link: "https://graas.org.in/chapter" };
+        sent = await deliver(m, "chapter_handover", "email", d.head_email, vars);
+        await admin.rpc("svc_log_message", { p_user: lg.id, p_event: "chapter_handover", p_channel: "email", p_to: d.head_email, p_vars: vars, p_ok: sent.ok, p_provider_id: sent.id ?? null, p_error: sent.ok ? null : sent.error ?? null, p_subject: sent.subject ?? null, p_actor: user.id });
+      }
+      return out({ ok: true, new_login: !!lg.password, emailed: sent.ok, label });
     }
 
     case "chapter_provision": {
@@ -313,6 +499,12 @@ Deno.serve(async (req) => {
       if (b.purpose === "change") {
         // Fee difference for a membership type change that staff have approved.
         o = await admin.rpc("svc_new_change_order", { p_user: user.id, p_can_charge: ready(g) });
+      } else if (b.purpose === "event") {
+        // A ticket for a paid event. The price comes from the event and whether the buyer is a member.
+        o = await admin.rpc("svc_new_event_order", { p_user: user.id, p_event: String(b.event_id ?? ""), p_can_charge: ready(g) });
+      } else if (b.purpose === "listing") {
+        // An expert paying the listing fee GRAAS set for their session.
+        o = await admin.rpc("svc_new_listing_order", { p_user: user.id, p_event: String(b.event_id ?? ""), p_can_charge: ready(g) });
       } else if (b.purpose === "chapter") {
         // A chapter coordinator paying in one go for students beyond the free seats.
         const ids = Array.isArray(b.ids) ? b.ids.map(String).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 500) : [];
@@ -328,7 +520,10 @@ Deno.serve(async (req) => {
         amount: o.data.total_paise,
         currency: "INR",
         receipt: o.data.order_id,
-        notes: { purpose: o.data.chapter_id ? "GRAAS chapter seats" : "GRAAS membership", plan: o.data.plan_name },
+        notes: {
+          purpose: o.data.chapter_id ? "GRAAS chapter seats" : o.data.event_id ? (b.purpose === "listing" ? "GRAAS session listing fee" : "GRAAS event ticket") : "GRAAS membership",
+          plan: o.data.plan_name,
+        },
       });
       if (!r.ok || !r.j?.id) {
         await admin.rpc("svc_attach_rzp", { p_order: o.data.order_id, p_rzp_order: null, p_error: rzpError(r) });

@@ -1,3 +1,4 @@
+import EventsBand from "@/components/home/EventsBand";
 import OpportunitiesBand from "@/components/home/OpportunitiesBand";
 import Audiences from "@/components/home/Audiences";
 import Benefits from "@/components/home/Benefits";
@@ -26,6 +27,7 @@ export default async function Home() {
       <Facts freeSeats={chapters.free_seats} maxDiscount={maxDiscount || 40} />
       <Audiences />
       <Benefits />
+      <EventsBand />
       <OpportunitiesBand />
       <ChaptersBand freeSeats={chapters.free_seats} minMembers={chapters.min_members} />
       <Climb />

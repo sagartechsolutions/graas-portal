@@ -38,6 +38,7 @@ export default function Header() {
       .then(({ data }) => {
         if (data?.staff && !data?.member) setHome({ href: "/admin", label: "Admin" });
         else if (data?.coordinator && !data?.member) setHome({ href: "/chapter", label: "Chapter console" });
+        else if (data?.expert && !data?.member) setHome({ href: "/studio", label: "Expert studio" });
         else setHome({ href: "/account", label: "My account" });
       });
   }, [signedIn]);
