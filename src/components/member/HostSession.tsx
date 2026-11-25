@@ -21,7 +21,7 @@ const STATUS: Record<string, { text: string; cls: string }> = {
 const EV: Record<string, string> = { draft: "Draft", pending: "With GRAAS for approval", awaiting_fee: "Listing fee due", approved: "Published", rejected: "Not approved", paused: "Paused", cancelled: "Cancelled", completed: "Completed" };
 
 const WAYS = [
-  { t: "Webinars and live sessions", d: "Teach online to members across India. GRAAS publishes the session and handles registrations." },
+  { t: "Webinars and live sessions", d: "Teach online to members in India and around the world. GRAAS publishes the session and handles registrations." },
   { t: "Lectures and workshops", d: "Hands-on or classroom sessions at a college, a chapter or your plant." },
   { t: "Free or paid", d: "Free sessions are simple. For paid ones GRAAS chooses ticket share or a fixed listing fee with you when approving." },
   { t: "Certificates for attendees", d: "Mark attendance and every attendee gets a GRAAS participation certificate." },

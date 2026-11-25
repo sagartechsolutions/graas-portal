@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/opps/MemberOpps";
 import { browserClient } from "@/lib/browser";
@@ -80,7 +81,7 @@ export function Registrations({ e, onClose, staff = false }: { e: any; onClose: 
                 )}
                 <span className="min-w-0 flex-1">
                   <b className="font-semibold">{r.name}</b>
-                  <span className="block text-sm text-ink2">{[r.member_no ?? "Not a member", r.organisation, r.city, staff ? r.email : null, staff && r.phone ? `+91 ${r.phone}` : null].filter(Boolean).join(" · ")}</span>
+                  <span className="block text-sm text-ink2">{[r.member_no ?? "Not a member", r.organisation, r.city, staff ? r.email : null, staff && r.phone ? phoneText(r.phone) : null].filter(Boolean).join(" · ")}</span>
                 </span>
                 {r.amount_paise > 0 && <span className="readout text-sm">{inr(r.amount_paise)}</span>}
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${REG_STATUS[r.status]?.tone}`}>{REG_STATUS[r.status]?.label}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText, phoneHref } from "@/lib/format";
 import { initials, usePhoto } from "./Details";
 
 /* A member's career profile as others see it (LinkedIn-style). Contact details are shown only when
@@ -93,7 +94,7 @@ export default function ProfileView({ p, mp, plan, showContact = false, note }: 
         {showContact ? (
           <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm">
             {p.email && <span>Email: <a className="font-semibold underline" href={`mailto:${p.email}`}>{p.email}</a></span>}
-            {p.phone && <span>Mobile: <a className="font-semibold underline" href={`tel:+91${p.phone}`}>+91 {p.phone}</a></span>}
+            {p.phone && <span>Mobile: <a className="font-semibold underline" href={phoneHref(p.phone)}>{phoneText(p.phone)}</a></span>}
           </p>
         ) : null}
 

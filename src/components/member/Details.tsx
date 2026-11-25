@@ -130,7 +130,7 @@ export function GuardianFields({ initial = {}, bad = () => ({}), lbl, withAgree 
         </label>
         <label className={lbl}>
           Their mobile number
-          <input name="guardian_phone" className="field bg-white" type="tel" inputMode="numeric" defaultValue={initial.guardian_phone ?? ""} placeholder="10-digit number" maxLength={14} required {...bad("guardian_phone")} />
+          <input name="guardian_phone" className="field bg-white" type="tel" inputMode="numeric" defaultValue={initial.guardian_phone ?? ""} placeholder="Mobile number" maxLength={20} required {...bad("guardian_phone")} />
         </label>
       </div>
       {withAgree && (

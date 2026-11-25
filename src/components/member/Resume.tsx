@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText } from "@/lib/format";
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LogoMark } from "@/components/site/Logo";
@@ -231,7 +232,7 @@ function useContent(a: any, mp: any, docs: any[], prefs: ResumePrefs) {
       if (p.pledged_at) graas.push({ name: "GRAAS Member Pledge", issuer: "Global Robotics And Automation Society", year: shortDate(String(p.pledged_at).slice(0, 10)) });
     }
     const verified = docs.filter((d) => d.kind !== "resume" && d.verify_status === "verified").map((d) => ({ name: d.title, issuer: d.issuer, year: d.issued_on ? shortDate(d.issued_on) : "", verified: true }));
-    const contact = [p.email, p.phone ? `+91 ${p.phone}` : null, [p.city, p.state && p.state !== "Outside India" ? p.state : null].filter(Boolean).join(", ") || null].filter(Boolean) as string[];
+    const contact = [p.email, p.phone ? phoneText(p.phone) : null, [p.city, p.state && p.state !== "Outside India" ? p.state : null].filter(Boolean).join(", ") || null].filter(Boolean) as string[];
     const headline = mp.headline || [p.designation, courseLine(p)].filter(Boolean).join(" · ");
     const hide = new Set(prefs.hide);
     return {

@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PledgeBox } from "./Pledge";
 import { browserClient, portal } from "@/lib/browser";
-import { INDIAN_STATES, inr } from "@/lib/money";
+import { inr } from "@/lib/money";
+import CountryState, { PHONE_HINT } from "./Region";
 import type { Plan } from "@/lib/site";
 import { GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, isMinor, type ProfileOptions } from "./Details";
 import { Alert, CodeForm } from "./Verify";
@@ -71,6 +72,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
       dob: v("dob"),
       city: v("city"),
       state: v("state"),
+      country: v("country") || "India",
       organisation: v("organisation"),
       website: v("org_website"),
       ...details,
@@ -182,7 +184,8 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
                   </label>
                   <label className={lbl}>
                     Mobile number (WhatsApp)
-                    <input name="phone" className="field" type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="10-digit number" maxLength={14} required {...bad("phone")} />
+                    <input name="phone" className="field" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" maxLength={20} required {...bad("phone")} />
+                    <span className="text-xs font-normal text-ink2">{PHONE_HINT}</span>
                   </label>
                   <label className={lbl}>
                     Email
@@ -198,15 +201,7 @@ export default function JoinApp({ plans: allPlans, options }: { plans: Plan[]; o
                     City
                     <input name="city" className="field" autoComplete="address-level2" maxLength={80} required {...bad("city")} />
                   </label>
-                  <label className={lbl}>
-                    State
-                    <select name="state" className="field" defaultValue="Maharashtra" autoComplete="address-level1">
-                      {INDIAN_STATES.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                      <option value="Outside India">Outside India</option>
-                    </select>
-                  </label>
+                  <CountryState lbl={lbl} bad={bad} required />
                 </div>
               )}
               <div className="grid gap-4 sm:grid-cols-2">

@@ -77,7 +77,7 @@ export default function WhatIsGraas() {
           <h2 className="h-section mt-3">A society that connects the classroom to the factory floor.</h2>
           <div className="mt-5 grid gap-4 text-[1.05rem] text-ink2 sm:text-[1.1rem]">
             <p>
-              The <strong className="text-ink">Global Robotics And Automation Society</strong> is a membership society for robotics and automation in India. It is
+              The <strong className="text-ink">Global Robotics And Automation Society</strong> is a global membership society for robotics and automation, founded in India. It is
               where a Class 8 student builds a first robot, an engineering student finds a team and a competition, a faculty member brings industry
               into the lab, and a company meets the people it will hire.
             </p>

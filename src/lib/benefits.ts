@@ -79,7 +79,7 @@ export const MEMBER_TYPES: MemberType[] = [
     name: "Professional",
     short: "Professionals and faculty",
     who: "Working engineers, technicians, faculty members and researchers.",
-    promise: "Stay sharp, share what you know, and be seen as one of the people who move Indian automation forward.",
+    promise: "Stay sharp, share what you know, and be seen as one of the people who move automation forward.",
     photo: "engineer",
     icon: "mic",
     bar: 16,

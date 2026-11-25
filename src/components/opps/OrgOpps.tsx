@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText, phoneHref } from "@/lib/format";
 import { useCallback, useEffect, useState } from "react";
 import ProfileView from "@/components/member/ProfileView";
 import { browserClient } from "@/lib/browser";
@@ -46,8 +47,8 @@ function Applicant({ x, onAct, school }: { x: any; onAct: (id: string, action: s
           {x.contact.phone && (
             <>
               {" · "}
-              <a className="font-semibold underline" href={`tel:+91${x.contact.phone}`}>
-                +91 {x.contact.phone}
+              <a className="font-semibold underline" href={phoneHref(x.contact.phone)}>
+                {phoneText(x.contact.phone)}
               </a>
             </>
           )}

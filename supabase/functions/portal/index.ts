@@ -23,8 +23,10 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } };
 const admin = createClient(SB_URL, SERVICE, noSession);
 
+// Only the GRAAS website may call this from a browser.
 const cors = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://graas.org.in",
+  Vary: "Origin",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -82,10 +84,18 @@ async function settle(g: any, rzpOrderId: string) {
 const firstName = (n: unknown) => String(n ?? "").trim().split(/\s+/)[0] || "there";
 const normEmail = (v: unknown) => String(v ?? "").trim().toLowerCase().slice(0, 160);
 const isEmail = (v: string) => /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v);
-const mobile = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-10);
-const isMobile = (v: string) => /^[6-9][0-9]{9}$/.test(v);
+/* Phone numbers: Indian mobiles are kept as 10 digits (a leading 0 or 91 is removed); numbers from other countries
+   are kept with their country code, up to 15 digits (no plus sign). */
+const mobile = (v: unknown) => {
+  const d = String(v ?? "").replace(/\D/g, "");
+  if (/^(91|0)[6-9][0-9]{9}$/.test(d)) return d.slice(-10);
+  return d.slice(0, 15);
+};
+/* The WhatsApp address: India's 91 is added only to 10-digit Indian mobiles. */
+const waTo = (phone: string) => (/^[6-9][0-9]{9}$/.test(phone) ? "91" + phone : phone);
+const isMobile = (v: string) => /^([6-9][0-9]{9}|[1-9][0-9]{10,14})$/.test(v);
 const maskEmail = (e: string) => e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + "*".repeat(Math.min(Math.max(b.length, 2), 6)) + c);
-const maskPhone = (p: string) => "+91 ***** " + p.slice(-5);
+const maskPhone = (p: string) => (/^[6-9][0-9]{9}$/.test(p) ? "+91 ***** " : "+***** ") + p.slice(-5);
 const profileOf = async (id: string) => (await admin.from("profiles").select("*").eq("id", id).maybeSingle()).data as any;
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -286,7 +296,7 @@ Deno.serve(async (req) => {
       };
       if (d.full_name.length < 3) return fail("Enter the full name.", { field: "full_name" });
       if (!isEmail(d.email)) return fail("Enter a valid email address.", { field: "email" });
-      if (d.phone && !isMobile(d.phone)) return fail("Enter a 10-digit mobile number.", { field: "phone" });
+      if (d.phone && !isMobile(d.phone)) return fail("Enter the mobile number: 10 digits in India, or with the country code elsewhere.", { field: "phone" });
       if ((await admin.from("profiles").select("id").ilike("email", d.email).maybeSingle()).data) return fail("A GRAAS login with this email already exists. Find it under Members.", { field: "email" });
       const free = b.complimentary === true;
       if (free && role !== "super_admin") return fail("Only a super admin can activate a membership without payment.");
@@ -341,7 +351,7 @@ Deno.serve(async (req) => {
       };
       if (d.head_name.length < 3) return fail("Enter the coordinator's full name.", { field: "head_name" });
       if (!isEmail(d.head_email)) return fail("Enter the coordinator's email.", { field: "head_email" });
-      if (d.head_phone && !isMobile(d.head_phone)) return fail("Enter a 10-digit mobile number.", { field: "head_phone" });
+      if (d.head_phone && !isMobile(d.head_phone)) return fail("Enter the mobile number: 10 digits in India, or with the country code elsewhere.", { field: "head_phone" });
       const lg = await loginFor(d.head_email, d.head_name, b.action === "admin_chapter_create" ? "admin_created" : "chapter_transfer");
       if (!lg.id) return fail(lg.error ?? "Could not set up the login.", { field: "head_email" });
       const r =
@@ -429,7 +439,8 @@ Deno.serve(async (req) => {
         plan_code: text(b.plan_code, 60),
         full_name: text(b.full_name, 80),
         email: text(b.email, 160).toLowerCase(),
-        phone: String(b.phone ?? "").replace(/\D/g, "").slice(-10),
+        phone: mobile(b.phone),
+        country: text(b.country, 60) || "India",
         dob: text(b.dob, 10),
         city: text(b.city, 80),
         state: text(b.state, 60),
@@ -444,7 +455,7 @@ Deno.serve(async (req) => {
         branch_other: text(b.branch_other, 80),
         study_year: text(b.study_year, 40),
         guardian_name: text(b.guardian_name, 80),
-        guardian_phone: String(b.guardian_phone ?? "").replace(/\D/g, "").slice(-10),
+        guardian_phone: mobile(b.guardian_phone),
         guardian_agree: b.guardian_agree === true,
         accept: b.accept === true,
       };
@@ -473,6 +484,8 @@ Deno.serve(async (req) => {
         await admin.auth.admin.deleteUser(id);
         return out(done?.data ?? { ok: false, error: "Could not save the application. Please try again." });
       }
+      // Country (the database function keeps the rest of the details).
+      if (/^[A-Za-z][A-Za-z .,'()&-]{1,59}$/.test(d.country)) await admin.from("profiles").update({ country: d.country }).eq("id", id);
       // The member pledge, ticked on the sign-up form (the website asks for it; members can also take it later).
       if (b.pledge === true) await admin.rpc("svc_mark_pledged", { p_user: id });
       // Email confirmation: the code goes out now, and the member types it on the next screen.
@@ -659,7 +672,7 @@ Deno.serve(async (req) => {
         if (!p?.phone) return fail("Add your mobile number in Profile first.");
         if (p.phone_verified_at) return out({ ok: true, already: true });
         if (!waTemplateReady(m, "code_verify_phone")) return fail("WhatsApp confirmation is not switched on yet.");
-        const r = await sendCode(m, { purpose, channel: "whatsapp", target: "91" + p.phone, user: user.id, ip, event: "code_verify_phone", name: firstName(p.full_name) });
+        const r = await sendCode(m, { purpose, channel: "whatsapp", target: waTo(p.phone), user: user.id, ip, event: "code_verify_phone", name: firstName(p.full_name) });
         return out({ ...r, sent_to: maskPhone(p.phone) });
       }
 
@@ -679,7 +692,7 @@ Deno.serve(async (req) => {
         const email = b.email ? normEmail(b.email) : "";
         const phone = !email && b.phone ? mobile(b.phone) : "";
         if (email && !isEmail(email)) return fail("Enter a valid email address.", { field: "email" });
-        if (!email && !isMobile(phone)) return fail("Enter your email address or your 10-digit mobile number.", { field: "email" });
+        if (!email && !isMobile(phone)) return fail("Enter your email address or your mobile number (with the country code outside India).", { field: "email" });
         if (email && !emailReady(m)) return fail("Password reset by email is not available yet. Write to connect@graas.org.in and we will help.");
         if (phone && !waTemplateReady(m, "code_reset_password")) return fail("Codes on WhatsApp are not available yet. Use your email address instead.");
         const shown = email ? maskEmail(email) : maskPhone(phone);
@@ -693,7 +706,7 @@ Deno.serve(async (req) => {
         const r = await sendCode(m, {
           purpose,
           channel: email ? "email" : "whatsapp",
-          target: email || "91" + phone,
+          target: email || waTo(phone),
           user: acc.user_id,
           ip,
           event: "code_reset_password",
@@ -712,7 +725,7 @@ Deno.serve(async (req) => {
       const p = await profileOf(user.id);
 
       if (purpose === "verify_email" || purpose === "verify_phone") {
-        const target = purpose === "verify_email" ? normEmail(p?.email) : "91" + (p?.phone ?? "");
+        const target = purpose === "verify_email" ? normEmail(p?.email) : waTo(p?.phone ?? "");
         const c = await admin.rpc("svc_check_code", { p_purpose: purpose, p_target: target, p_code: code });
         if (c.error || !c.data?.ok) return out(c.data ?? { ok: false, error: "Could not check the code. Please try again." });
         const v = await admin.rpc("svc_mark_verified", { p_user: user.id, p_kind: purpose === "verify_email" ? "email" : "phone" });
@@ -755,7 +768,7 @@ Deno.serve(async (req) => {
         await pause(400);
         return fail("That code is not right. Check it and try again.", { field: "code" });
       }
-      const c = await admin.rpc("svc_check_code", { p_purpose: "reset_password", p_target: email || "91" + phone, p_code: code });
+      const c = await admin.rpc("svc_check_code", { p_purpose: "reset_password", p_target: email || waTo(phone), p_code: code });
       if (c.error || !c.data?.ok) return out({ ...(c.data ?? { ok: false, error: "Could not check the code. Please try again." }), field: "code" });
       if (c.data.user_id !== acc.user_id) return fail("That code is not right. Check it and try again.", { field: "code" });
       const u = await admin.auth.admin.updateUserById(acc.user_id, { password: pw });
@@ -833,8 +846,8 @@ Deno.serve(async (req) => {
         r = await deliver(m, "test", "email", to, { name: "there" });
       } else {
         const ph = mobile(b.to);
-        if (!isMobile(ph)) return fail("Enter the 10-digit mobile number to send the test to.");
-        to = "91" + ph;
+        if (!isMobile(ph)) return fail("Enter the mobile number to send the test to (with the country code outside India).");
+        to = waTo(ph);
         if (!m0.wa_token || !m0.whatsapp?.phone_number_id) return fail("Save the Phone number ID and access token first.");
         // hello_world is the sample template Meta places in every WhatsApp Business account.
         const g = await graph(m0, "POST", `${m0.whatsapp.phone_number_id}/messages`, {

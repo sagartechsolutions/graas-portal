@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText } from "@/lib/format";
 import "@fontsource/ibm-plex-serif/400.css";
 import "@fontsource/ibm-plex-serif/400-italic.css";
 import "@fontsource/ibm-plex-serif/600.css";
@@ -304,7 +305,7 @@ export function IdBack(props: DocProps) {
   const { m, p, url } = useDoc(props);
   const org = props.org ?? {};
   const contact = org.email || "connect@graas.org.in";
-  const guardian = p.guardian_name && p.guardian_phone ? `${p.guardian_name}, +91 ${p.guardian_phone}` : null;
+  const guardian = p.guardian_name && p.guardian_phone ? `${p.guardian_name}, ${phoneText(p.guardian_phone)}` : null;
   const host = (typeof window === "undefined" ? "graas.org.in" : window.location.host).replace(/^www\./, "");
   return (
     <CardShell>

@@ -7,7 +7,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Logo from "@/components/site/Logo";
 import { browserClient, portal } from "@/lib/browser";
-import { INDIAN_STATES, STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
+import { STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
+import { normPhone, phoneText } from "@/lib/format";
+import CountryState, { PHONE_HINT } from "./Region";
 import type { Plan } from "@/lib/site";
 import { EMPTY_OPTIONS, GuardianFields, ORG_LABEL, PersonFields, ROLE_HINT, ROLE_LABEL, initials, isIndividual, isMinor, isSchoolCourse, removePhoto, uploadPhoto, usePhoto, type ProfileOptions } from "./Details";
 import { planFee } from "./JoinApp";
@@ -877,7 +879,7 @@ function Alerts({ a, reload }: { a: Account; reload: (msg?: string) => void }) {
               {!a.channels?.whatsapp
                 ? "Coming soon. You will be able to switch this on once GRAAS WhatsApp is live."
                 : phoneOk
-                  ? `Approvals, receipts and reminders on +91 ${p.phone}.`
+                  ? `Approvals, receipts and reminders on ${phoneText(p.phone)}.`
                   : "Confirm your WhatsApp number first, on the Overview tab."}
             </span>
           </span>
@@ -958,10 +960,14 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget).entries());
-    const phone = String(f.phone).replace(/\D/g, "").slice(-10);
-    const guardian_phone = String(f.guardian_phone ?? "").replace(/\D/g, "").slice(-10);
+    const phone = normPhone(String(f.phone));
+    const guardian_phone = normPhone(String(f.guardian_phone ?? ""));
     const { data, error } = await sb().rpc("member_update_profile", { p: { ...f, phone, guardian_phone } });
     if (error) return setMsg({ tone: "bad", text: "Could not save just now. Check your internet and try again." });
+    if (data?.ok && f.country && f.country !== p.country) {
+      const c = await sb().rpc("member_set_country", { p_country: String(f.country) });
+      if (!c.data?.ok) return setMsg({ tone: "bad", text: c.data?.error ?? "Your details are saved, but the country could not be changed." });
+    }
     if (data?.ok) {
       setMsg({ tone: "good", text: phone !== p.phone && p.phone_verified_at ? "Saved. Confirm your new number on WhatsApp from the Overview tab." : "Saved." });
       reload();
@@ -1000,7 +1006,8 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             <span className="flex flex-wrap items-center gap-2">
               Mobile number (WhatsApp) {a.channels?.whatsapp && <Verified on={!!p.phone_verified_at} />}
             </span>
-            <input name="phone" className="field" type="tel" inputMode="numeric" defaultValue={p.phone ?? ""} maxLength={14} required />
+            <input name="phone" className="field" type="tel" inputMode="tel" defaultValue={p.phone ?? ""} maxLength={20} required />
+            <span className="text-xs font-normal text-ink2">{PHONE_HINT}</span>
             {p.phone_verified_at && <span className="text-sm font-normal text-ink2">If you change it, you confirm the new number again.</span>}
           </label>
           <div className={`${lbl} sm:col-span-2`}>
@@ -1014,15 +1021,7 @@ function Profile({ a, reload }: { a: Account; reload: (msg?: string) => void }) 
             City
             <input name="city" className="field" defaultValue={p.city ?? ""} maxLength={80} />
           </label>
-          <label className={lbl}>
-            State
-            <select name="state" className="field" defaultValue={p.state ?? "Maharashtra"}>
-              {INDIAN_STATES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-              <option value="Outside India">Outside India</option>
-            </select>
-          </label>
+          <CountryState country={p.country} state={p.state} lbl={lbl} />
           <label className={lbl}>
             {a.membership?.plan?.code === "school-student" ? "School" : (ORG_LABEL[kind] ?? "Organisation")}
             <input name="organisation" className="field" defaultValue={p.organisation ?? ""} maxLength={120} />
@@ -1507,7 +1506,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           {(current === "overview" || current === "home") && (needEmail || needPhone) && (
             <div id="confirm-contact" className="mb-5 grid gap-5 lg:grid-cols-2 print:hidden">
               {needEmail && <VerifyCard kind="email" target={a.profile.email} required={a.channels?.email_required} onDone={() => reload("Your email is confirmed.")} />}
-              {needPhone && <VerifyCard kind="phone" target={`+91 ${a.profile.phone}`} required={a.channels?.phone_required} onDone={() => reload("Your WhatsApp number is confirmed. Account updates will come there too.")} />}
+              {needPhone && <VerifyCard kind="phone" target={phoneText(a.profile.phone)} required={a.channels?.phone_required} onDone={() => reload("Your WhatsApp number is confirmed. Account updates will come there too.")} />}
             </div>
           )}
           {(current === "overview" || current === "home") && m && !a.profile.pledged_at && (

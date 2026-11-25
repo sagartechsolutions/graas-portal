@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "GRAAS",
     title: "GRAAS | Global Robotics And Automation Society",
-    description: "India's society for robotics and automation: students, schools, colleges, professionals and industry in one network.",
+    description: "A global society for robotics and automation: students, schools, colleges, professionals and industry in one network.",
   },
 };
 

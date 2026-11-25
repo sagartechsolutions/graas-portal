@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText, phoneHref } from "@/lib/format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { browserClient } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
@@ -267,8 +268,8 @@ export default function MemberOpps({ a, goProfile }: { a: any; goProfile: () => 
                   {x.contact.phone && (
                     <>
                       {" · "}
-                      <a className="font-semibold underline" href={`tel:+91${x.contact.phone}`}>
-                        +91 {x.contact.phone}
+                      <a className="font-semibold underline" href={phoneHref(x.contact.phone)}>
+                        {phoneText(x.contact.phone)}
                       </a>
                     </>
                   )}

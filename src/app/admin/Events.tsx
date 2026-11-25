@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText } from "@/lib/format";
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EV_STATUS, EventBody, fmtWhen, priceLine } from "@/components/events/EvBits";
@@ -188,7 +189,7 @@ export function Events({ session, role }: { session: Session; role: string }) {
                     </p>
                     <p className="text-ink2">{[x.headline, x.organisation, x.designation].filter(Boolean).join(" · ")}</p>
                     <p className="text-sm text-ink2">
-                      {x.email} · {x.phone ? `+91 ${x.phone}` : "no phone"} · {x.sessions} sessions
+                      {x.email} · {x.phone ? phoneText(x.phone) : "no phone"} · {x.sessions} sessions
                       {x.linkedin && (
                         <>
                           {" · "}

@@ -98,7 +98,7 @@ export default async function Page() {
 
       <section className="section bg-mist">
         <div className="shell">
-          <SectionHead kicker="Who we work with" title="Built for every corner of Indian manufacturing." />
+          <SectionHead kicker="Who we work with" title="Built for every corner of manufacturing, in India and worldwide." />
           <ul className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {SECTORS.map((s, i) => (
               <li key={s.t}>

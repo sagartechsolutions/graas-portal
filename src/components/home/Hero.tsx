@@ -29,7 +29,7 @@ export default function Hero() {
           <p className="chip">
             <span className="dot dot-live" />
             <span>
-              Global Robotics And Automation Society<span className="hidden sm:inline">, India</span>
+              Global Robotics And Automation Society
             </span>
           </p>
           <h1 className="h-display mt-6">One society for everyone who builds robots and automates.</h1>

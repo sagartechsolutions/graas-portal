@@ -1,5 +1,6 @@
 "use client";
 
+import { normPhone } from "@/lib/format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,14 +29,14 @@ export default function ForgotApp() {
       .then(({ data }) => setCh((data as Channels) ?? { email: false, whatsapp: false }));
   }, []);
 
-  const body = () => (via === "email" ? { email: who.trim() } : { phone: who.replace(/\D/g, "").slice(-10) });
+  const body = () => (via === "email" ? { email: who.trim() } : { phone: normPhone(who) });
 
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
     setErr(null);
     setNote("");
     if (via === "email" && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(who.trim())) return setErr({ field: "who", text: "Enter the email address you signed up with." });
-    if (via === "whatsapp" && !/^[6-9][0-9]{9}$/.test(who.replace(/\D/g, "").slice(-10))) return setErr({ field: "who", text: "Enter your 10-digit mobile number." });
+    if (via === "whatsapp" && !/^([6-9][0-9]{9}|[1-9][0-9]{10,14})$/.test(normPhone(who))) return setErr({ field: "who", text: "Enter your 10-digit mobile number." });
     setBusy(true);
     const r = await portal("send_code", { purpose: "reset_password", ...body() });
     setBusy(false);

@@ -15,7 +15,7 @@ export default function Footer() {
       <div className="shell grid gap-8 py-10 lg:grid-cols-[1.4fr_2fr]">
         <div>
           <Logo tone="light" full />
-          <p className="mt-6 max-w-sm text-white/70">India&apos;s society for robotics and automation: school and college students, professionals, institutions and industry, learning and building together.</p>
+          <p className="mt-6 max-w-sm text-white/70">A global society for robotics and automation: school and college students, professionals, institutions and industry, learning and building together.</p>
           <Link href="/join" className="btn btn-light mt-7">
             Become a member
           </Link>

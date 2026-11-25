@@ -12,7 +12,7 @@ export default function Page() {
     <>
       <PageHero
         kicker="For industry leaders, engineers and trainers"
-        title={<>Teach what you know to India&apos;s next automation engineers.</>}
+        title={<>Teach what you know to the next generation of automation engineers.</>}
         intro={<>Host webinars, live classes, lectures and workshops on GRAAS. You bring the knowledge; GRAAS brings verified students and professionals, registration, payments, reminders and certificates.</>}
         photo="engineer"
         actions={
@@ -26,7 +26,7 @@ export default function Page() {
           </>
         }
         badges={[
-          { icon: "people", title: "A ready audience", text: "College students, professionals and chapters across India" },
+          { icon: "people", title: "A ready audience", text: "College students, professionals and chapters in India and around the world" },
           { icon: "certificate", title: "Certificates included", text: "Your attendees get GRAAS participation certificates" },
         ]}
       />

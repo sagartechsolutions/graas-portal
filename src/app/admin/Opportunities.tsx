@@ -1,6 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { phoneText } from "@/lib/format";
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OPP_STATUS, OppBody } from "@/components/opps/OppBits";
@@ -151,7 +152,7 @@ export function Opportunities({ session }: { session: Session }) {
                 <h2 className="text-2xl font-semibold tracking-tight">{open.title}</h2>
                 <p className="text-ink2">
                   {open.org_name}
-                  {open.poster ? ` · ${open.poster.name}, ${open.poster.email}${open.poster.phone ? `, +91 ${open.poster.phone}` : ""}` : " · Posted by GRAAS"}
+                  {open.poster ? ` · ${open.poster.name}, ${open.poster.email}${open.poster.phone ? `, ${phoneText(open.poster.phone)}` : ""}` : " · Posted by GRAAS"}
                 </p>
               </div>
               <button type="button" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line text-xl" onClick={() => setOpen(null)} aria-label="Close">
