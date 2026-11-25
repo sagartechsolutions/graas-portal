@@ -22,6 +22,9 @@ Applied to the `graas-portal` Supabase project, in order:
 | `pledge_profiles_roles`, `opportunities`, `events_sessions`, `expert_sessions_choose_model`, `expert_signup`, `admin_controls` | `0016` to `0019` | pledge and career profiles, opportunities, events and experts, admin controls (25 Nov) |
 | `whatsapp_inbox_and_reminders_1`, `_2`, `_3` | recorded in Supabase | 25 Nov afternoon: WhatsApp inbox (`wa_threads`, `wa_messages`), delivery and read status, Meta app secret and verify token, automatic reply, event reminders by email and WhatsApp, WhatsApp rows for event and opportunity messages. The session that wrote them lost its copy of the code; the admin screens were rebuilt from the live site on 26 Nov. The `whatsapp-webhook` and `whatsapp-admin` functions (version 1) are deployed but their source is not in this folder yet: copy it with the Supabase connector's get_edge_function. |
 | `public_profiles_documents` | `0021_public_profiles_documents.sql` | 26 Nov: public profile switch, resume settings, cover, view count; QR page data (`member_public`); member documents (resume, certificates) in the private `member-docs` bucket with GRAAS verification; school students cannot apply to host |
+| `resume_brand_skills_public_stats` | `0022_resume_brand_skills_public_stats.sql` | 26 Nov: GRAAS mark on resumes (on by default), resume skills limited to 12, live member numbers for About (off by default) |
+| `international_members` | `0023_international_members.sql` | 26 Nov: country on profiles; mobile numbers from any country (10 digits for India, otherwise country code + number); WhatsApp adds 91 only to Indian mobiles |
+| `security_hardening` | `0024_security_hardening.sql` | 26 Nov: lookup limits per connection (150 an hour, 600 a day); initials only for young members in public verification; visitors can call only the public lookups and read only public tables; direct writes only where admin screens edit rows; .doc uploads removed |
 
 Rows marked "recorded in Supabase" or "(note)" were applied through the Supabase connector (24 and 25 Nov 2026). Their full SQL is stored in the project's
 migration history (`supabase_migrations.schema_migrations`). To copy them into this folder, run
@@ -32,4 +35,11 @@ staff account tools, message tests, Meta template sync), `razorpay-webhook`, and
 by the database through pg_net and every two minutes by pg_cron, with a key kept in `private.app_secrets`; it also sets up
 logins for approved chapter students). `portal` and `notify` import `_shared/messaging.ts` (Brevo email and Meta WhatsApp)
 and `_shared/provision.ts` (chapter student logins). All are deployed with JWT checking off because
-each does its own checks.
+each does its own checks. `whatsapp-webhook` (Meta delivery reports and incoming messages, checked against the Meta app
+secret) and `whatsapp-admin` (template sync, number registration, business profile, inbox replies; staff only) use
+`_shared/messaging.ts` too. `portal` and `whatsapp-admin` answer browsers only from https://graas.org.in.
+
+**Rule since 0024:** new tables and functions in `public` start closed to visitors who are not signed in. A new public
+lookup needs `grant execute on function ... to anon`, a new public table needs `grant select ... to anon`, and a table the
+admin screens write directly needs an explicit `grant insert/update/delete ... to authenticated`. Row level security stays
+on every table either way.

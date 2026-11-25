@@ -238,6 +238,11 @@ const SAMPLES: Record<string, string> = {
   topic: "membership application",
   subject: "Registrations open for the GRAAS robotics workshop",
   code: "123456",
+  event: "Introduction to industrial robots",
+  when: "Sat, 06 Dec 2026, 11:00 AM IST",
+  title: "Automation intern",
+  org: "Nashik Automation Works",
+  status: "shortlisted",
 };
 
 /** The request that submits a template row to Meta. Rows that share a wa_name are submitted once. */

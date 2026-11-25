@@ -172,6 +172,9 @@ async function loginFor(email: string, name: string, via: string): Promise<{ id?
 
 const STAFF_ROLES = ["super_admin", "membership_desk", "chapter_manager", "event_manager", "finance", "communications", "support", "regional_coordinator", "moderator"];
 const text = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+/* Supabase refuses passwords that are too weak or that appear in known data leaks (when that protection is on). */
+const weakPw = (e: any) => e?.code === "weak_password" || /weak|pwned|leak|compromised/i.test(String(e?.message ?? ""));
+const WEAK_PW = "This password is too easy to guess or has appeared in a data leak elsewhere. Choose a different one.";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -191,7 +194,10 @@ Deno.serve(async (req) => {
   const asUser = () => createClient(SB_URL, req.headers.get("apikey") ?? ANON, { ...noSession, global: { headers: { Authorization: `Bearer ${token}` } } });
   const audit = (action: string, entity: string, entity_id: string, detail: Record<string, unknown> = {}) =>
     admin.from("audit_log").insert({ actor: user?.id ?? null, action, entity, entity_id, detail });
-  const ipHash = () => sha((req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() + "|graas");
+  // The visitor's address as Cloudflare saw it (a visitor cannot fake this header); x-forwarded-for only as a fallback.
+  const clientIp = () =>
+    (req.headers.get("cf-connecting-ip") ?? req.headers.get("x-real-ip") ?? (req.headers.get("x-forwarded-for") ?? "").split(",")[0]).trim();
+  const ipHash = () => sha(clientIp() + "|graas");
 
   switch (b?.action) {
     case "chapter_signup": {
@@ -222,6 +228,7 @@ Deno.serve(async (req) => {
       const id = made.data?.user?.id;
       if (made.error || !id) {
         const dup = /already|registered|exists/i.test(made.error?.message ?? "");
+        if (!dup && weakPw(made.error)) return fail(WEAK_PW, { field: "password" });
         return fail(dup ? "An account with this email already exists. Sign in, then open the chapter page." : "Could not create the account. Please try again.", { field: "email" });
       }
       const leaked = (await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data;
@@ -267,6 +274,7 @@ Deno.serve(async (req) => {
       const id = made.data?.user?.id;
       if (made.error || !id) {
         const dup = /already|registered|exists/i.test(made.error?.message ?? "");
+        if (!dup && weakPw(made.error)) return fail(WEAK_PW, { field: "password" });
         return fail(dup ? "An account with this email already exists. Sign in, then open the Expert studio." : "Could not create the account. Please try again.", { field: "email" });
       }
       const leaked = (await admin.from("staff_members").select("user_id").eq("user_id", id).maybeSingle()).data;
@@ -423,7 +431,7 @@ Deno.serve(async (req) => {
       const member = (await admin.from("memberships").select("id").eq("user_id", user.id).limit(1)).data?.length ?? 0;
       if (member && b.pledge !== true) return fail("Please take the GRAAS member pledge to confirm your membership.", { field: "pledge" });
       const u = await admin.auth.admin.updateUserById(user.id, { password: pw });
-      if (u.error) return fail(/weak|short|pwned|leak/i.test(u.error.message ?? "") ? "Choose a stronger password." : "Could not save the password. Please try again.", { field: "password" });
+      if (u.error) return fail(weakPw(u.error) ? WEAK_PW : "Could not save the password. Please try again.", { field: "password" });
       await admin.rpc("svc_first_password_done", { p_user: user.id });
       if (member) await admin.rpc("svc_mark_pledged", { p_user: user.id });
       await audit("first_password_set", "profiles", user.id);
@@ -475,6 +483,7 @@ Deno.serve(async (req) => {
       const id = made.data?.user?.id;
       if (made.error || !id) {
         const dup = /already|registered|exists/i.test(made.error?.message ?? "");
+        if (!dup && weakPw(made.error)) return fail(WEAK_PW, { field: "password" });
         return fail(dup ? "An account with this email already exists. Sign in instead." : "Could not create the account. Please try again.", { field: "email" });
       }
       // A website sign-up must never end up with staff rights.
@@ -614,7 +623,7 @@ Deno.serve(async (req) => {
       const tStaff = (await admin.from("staff_members").select("user_id").eq("user_id", target).maybeSingle()).data;
       if (tStaff && role !== "super_admin") return fail("Only a super admin can reset a staff password.");
       const r = await admin.auth.admin.updateUserById(target, { password: pw });
-      if (r.error) return fail("Could not reset the password.");
+      if (r.error) return fail(weakPw(r.error) ? WEAK_PW : "Could not reset the password.");
       await audit("password_reset", "profiles", target);
       await admin.rpc("svc_enqueue", { p_user: target, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
       return out({ ok: true });
@@ -772,7 +781,7 @@ Deno.serve(async (req) => {
       if (c.error || !c.data?.ok) return out({ ...(c.data ?? { ok: false, error: "Could not check the code. Please try again." }), field: "code" });
       if (c.data.user_id !== acc.user_id) return fail("That code is not right. Check it and try again.", { field: "code" });
       const u = await admin.auth.admin.updateUserById(acc.user_id, { password: pw });
-      if (u.error) return fail("Could not change the password. Please try again.");
+      if (u.error) return fail(weakPw(u.error) ? WEAK_PW : "Could not change the password. Please try again.", { field: "password" });
       if (email) await admin.rpc("svc_mark_verified", { p_user: acc.user_id, p_kind: "email" });
       await admin.rpc("svc_enqueue", { p_user: acc.user_id, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
       await admin.from("audit_log").insert({ actor: acc.user_id, action: "password_reset_by_code", entity: "profiles", entity_id: acc.user_id, detail: { via: email ? "email" : "whatsapp" } });
@@ -790,7 +799,7 @@ Deno.serve(async (req) => {
       if (s.error || !s.data?.session) return fail("Your current password is not right.", { field: "current" });
       await check.auth.signOut();
       const u = await admin.auth.admin.updateUserById(user.id, { password: pw });
-      if (u.error) return fail("Could not change the password. Please try again.");
+      if (u.error) return fail(weakPw(u.error) ? WEAK_PW : "Could not change the password. Please try again.", { field: "password" });
       await admin.rpc("svc_enqueue", { p_user: user.id, p_event: "password_changed", p_vars: { when: nowIST() }, p_dedupe: null });
       await audit("password_changed", "profiles", user.id);
       return out({ ok: true });

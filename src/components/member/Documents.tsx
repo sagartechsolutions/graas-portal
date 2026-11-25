@@ -14,7 +14,7 @@ const MAX = 5 * 1024 * 1024;
 const KINDS: Record<string, { label: string; accept: string; hint: string }> = {
   certificate: { label: "Certificate", accept: ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp", hint: "PDF or image (JPG, PNG), up to 5 MB" },
   other: { label: "Other document", accept: ".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp", hint: "For example an internship letter or a mark sheet. PDF or image, up to 5 MB" },
-  resume: { label: "Own resume (not recommended)", accept: ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document", hint: "PDF or Word, up to 5 MB" },
+  resume: { label: "Own resume (not recommended)", accept: ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document", hint: "PDF or Word (.docx), up to 5 MB" },
 };
 const STATUS: Record<string, { text: string; cls: string }> = {
   verified: { text: "Verified by GRAAS", cls: "bg-go-soft text-go-deep" },

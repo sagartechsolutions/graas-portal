@@ -6,7 +6,7 @@ import { LogoMark } from "@/components/site/Logo";
 import { browserClient } from "@/lib/browser";
 import { shortDate } from "@/lib/money";
 
-type Result = { found: boolean; kind?: "member" | "chapter"; member_no?: string; name?: string; plan?: string; organisation?: string | null; chapter?: string | null; members?: number; state?: string; member_since?: string; valid_until?: string | null };
+type Result = { found: boolean; limited?: boolean; masked?: boolean; kind?: "member" | "chapter"; member_no?: string; name?: string; plan?: string; organisation?: string | null; chapter?: string | null; members?: number; state?: string; member_since?: string; valid_until?: string | null };
 const TONE: Record<string, { label: string; cls: string; text: string }> = {
   active: { label: "Active member", cls: "bg-go-soft text-go-deep", text: "This membership is current." },
   expired: { label: "Membership expired", cls: "bg-[#fff4e5] text-[#8a4b00]", text: "This membership has ended and has not been renewed." },
@@ -51,7 +51,11 @@ export default function VerifyApp() {
           </button>
         </form>
         <div aria-live="polite">
-          {res && !res.found && <p className="card mt-8 p-6 font-medium">No member or chapter has this number. Check the number and try again.</p>}
+          {res && !res.found && (
+            <p className="card mt-8 p-6 font-medium">
+              {res.limited ? "Too many checks from this connection. Please try again in an hour." : "No member or chapter has this number. Check the number and try again."}
+            </p>
+          )}
           {res?.found && t && (
             <div className="card mt-8 overflow-hidden shadow-[var(--shadow-card)]">
               <div className="flex items-center justify-between gap-4 bg-ink p-6 text-white">
@@ -70,6 +74,7 @@ export default function VerifyApp() {
                   <dt className="text-sm text-ink2">{res.kind === "chapter" ? "Chapter" : "Name"}</dt>
                   <dd className="text-2xl font-semibold tracking-tight">{res.kind === "chapter" ? res.name : (res.organisation ?? res.name)}</dd>
                   {res.kind !== "chapter" && res.organisation && <dd className="text-ink2">Represented by {res.name}</dd>}
+                  {res.masked && <dd className="text-sm text-ink2">Only initials are shown to protect a young member&apos;s privacy.</dd>}
                   {res.kind === "chapter" && <dd className="text-ink2">{res.members ?? 0} members</dd>}
                   {res.kind !== "chapter" && res.chapter && <dd className="text-ink2">Member of {res.chapter}</dd>}
                 </div>

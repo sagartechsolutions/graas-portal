@@ -105,8 +105,12 @@ export default function PublicProfile({ no }: { no: string }) {
       <section className="bg-mist">
         <div className="mx-auto max-w-xl px-5 py-16 text-center">
           <LogoMark size={52} />
-          <h1 className="h-section mt-6">No GRAAS record for {no.toUpperCase()}</h1>
-          <p className="lede mt-3">Check the number printed under the QR code. If it still does not match, the document may not be genuine.</p>
+          <h1 className="h-section mt-6">{r.limited ? "Too many checks just now" : `No GRAAS record for ${no.toUpperCase()}`}</h1>
+          <p className="lede mt-3">
+            {r.limited
+              ? "This connection has checked a lot of GRAAS numbers in a short time. Please try again in an hour."
+              : "Check the number printed under the QR code. If it still does not match, the document may not be genuine."}
+          </p>
           <Link href="/verify" className="btn btn-primary mt-6">
             Check another number
           </Link>
@@ -143,6 +147,7 @@ export default function PublicProfile({ no }: { no: string }) {
                 <p className="text-sm text-white/70">{chapter ? "GRAAS chapter" : org ? "GRAAS institutional member" : "GRAAS member"}</p>
                 <h1 className="mt-1 text-[clamp(1.9rem,1.3rem+2vw,3rem)] font-semibold leading-tight tracking-tight">{shownName}</h1>
                 {org && !chapter && r.name && <p className="mt-1 text-white/80">Represented by {r.name}</p>}
+                {r.masked && <p className="mt-1 text-sm text-white/70">Only initials are shown to protect a young member&apos;s privacy.</p>}
                 {!chapter && r.chapter && <p className="mt-1 text-white/80">Member of {r.chapter}</p>}
                 {chapter && r.organisation && <p className="mt-1 text-white/80">{[r.organisation, r.branch, r.city].filter(Boolean).join(" · ")}</p>}
               </div>
