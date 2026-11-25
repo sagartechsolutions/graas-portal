@@ -80,7 +80,7 @@ const LINKS: [string, string][] = [
   ["website", "Website"],
 ];
 
-function Tags({ value, onChange, ph, max }: { value: string[]; onChange: (v: string[]) => void; ph: string; max: number }) {
+export function Tags({ value, onChange, ph, max }: { value: string[]; onChange: (v: string[]) => void; ph: string; max: number }) {
   const [t, setT] = useState("");
   const add = () => {
     const parts = t.split(",").map((x) => x.trim()).filter(Boolean);

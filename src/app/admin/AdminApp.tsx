@@ -13,6 +13,7 @@ import { ProfileOptionsEditor } from "./Options";
 import { Broadcast, Messages } from "./Messages";
 import { Coupons, Gateway, Payments } from "./Money";
 import { MyLogin, PledgeEditor } from "./Platform";
+import { Opportunities } from "./Opportunities";
 
 type PlanRow = {
   id: string;
@@ -554,6 +555,7 @@ const GROUPS: { title: string; items: [string, string][] }[] = [
   { title: "Overview", items: [["dashboard", "Dashboard"]] },
   { title: "Membership", items: [["members", "Members"], ["chapters", "Chapters"], ["changes", "Type changes"], ["payments", "Payments and refunds"], ["plans", "Plans and fees"], ["coupons", "Coupons"], ["gateway", "Payment gateway"]] },
   { title: "Website", items: [["updates", "Updates"], ["gallery", "Gallery"], ["policies", "Rules and policies"], ["pledge", "Member pledge"]] },
+  { title: "Platform", items: [["opportunities", "Opportunities"]] },
   { title: "People", items: [["leads", "Enquiries"], ["helpdesk", "Help requests"]] },
   { title: "Messages", items: [["messages", "Email and WhatsApp"], ["broadcast", "Send an update"]] },
   { title: "System", items: [["staff", "Staff"], ["settings", "Settings"], ["activity", "Activity log"], ["mylogin", "My login"]] },
@@ -620,6 +622,7 @@ export default function AdminApp() {
     settings: role === "super_admin",
     activity: role === "super_admin",
     pledge: role === "super_admin",
+    opportunities: is("moderator", "membership_desk"),
     mylogin: true,
   };
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(([id]) => allowed[id]) })).filter((g) => g.items.length);
@@ -703,6 +706,7 @@ export default function AdminApp() {
           {current === "settings" && <Settings session={session} />}
           {current === "activity" && <Activity />}
           {current === "pledge" && <PledgeEditor />}
+          {current === "opportunities" && <Opportunities session={session} />}
           {current === "mylogin" && <MyLogin email={session.user.email ?? ""} />}
           {current === "messages" && <Messages role={role} />}
           {current === "broadcast" && <Broadcast key={prefill?.subject ?? "new"} prefill={prefill} onSent={() => setPrefill(null)} />}

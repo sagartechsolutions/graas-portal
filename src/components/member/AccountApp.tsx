@@ -15,6 +15,8 @@ import CareerProfile from "./CareerProfile";
 import { Certificate, IdCards, PledgeCertificate } from "./MemberDocs";
 import { PledgeBox, TakePledge, usePledge } from "./Pledge";
 import Resume from "./Resume";
+import MemberOpps from "@/components/opps/MemberOpps";
+import OrgOpps from "@/components/opps/OrgOpps";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
@@ -1394,6 +1396,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
     { id: "overview", label: "Overview", show: true },
     { id: "career", label: orgMember ? "Company page" : "Profile", show: !!m },
     { id: "resume", label: "Resume", show: !!m && !orgMember },
+    { id: "opportunities", label: "Opportunities", show: !!m },
     { id: "certificates", label: "Certificates", show: hasId },
     { id: "payments", label: "Payments", show: true },
     { id: "profile", label: "Account", show: true },
@@ -1446,6 +1449,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           {tab === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
           {tab === "career" && m && <CareerProfile a={a} goDetails={() => setTab("profile")} />}
           {tab === "resume" && m && <Resume a={a} />}
+          {tab === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => setTab("career")} />)}
           {tab === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={setTab} />}
           {tab === "payments" &&
             (receipt ? (

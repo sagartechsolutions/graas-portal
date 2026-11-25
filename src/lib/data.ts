@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@supabase/supabase-js";
 import { cacheLife, cacheTag } from "next/cache";
 import { POLICY_DEFAULTS, type Policy } from "./policy-defaults";
@@ -209,4 +210,29 @@ export async function getPolicies(): Promise<Policy[]> {
 
 export async function getPolicy(slug: string): Promise<Policy | null> {
   return (await getPolicies()).find((p) => p.slug === slug) ?? null;
+}
+
+/** Open, approved opportunities for the public pages (newest first). */
+export async function getOpportunities(): Promise<any[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("opportunities");
+  try {
+    const { data } = await publicClient().rpc("public_opportunities");
+    return (data ?? []) as any[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getOpportunity(ref: string): Promise<any | null> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("opportunities");
+  try {
+    const { data } = await publicClient().rpc("public_opportunity", { p_ref: ref });
+    return (data as any) ?? null;
+  } catch {
+    return null;
+  }
 }
