@@ -454,11 +454,15 @@ input[type="range"].jog::-moz-range-thumb {
 .sheen { position: relative; overflow: hidden; }
 .sheen::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent); animation: sheen 5.5s ease-in-out infinite; pointer-events: none; }
 
+/* A panel that swaps its content (branch finder) */
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } }
+.fade-up { animation: fade-up 500ms var(--ease-out) both; }
+
 /* Counting numbers */
 .tabular { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
-  .flow, .spin-slow, .node-pop, .fan-card, .sheen::after, .rail-fill { animation: none !important; }
+  .flow, .spin-slow, .node-pop, .fan-card, .sheen::after, .rail-fill, .fade-up { animation: none !important; }
 }
 
 /* Multi-page resume: the pages are copied into .print-root (a direct child of body). While the resume is open,

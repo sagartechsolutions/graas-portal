@@ -8,7 +8,7 @@ import Photo from "@/components/ui/Photo";
 import Reveal from "@/components/ui/Reveal";
 import { getOrg } from "@/lib/data";
 import { PHOTOS } from "@/lib/photos";
-import { ORG } from "@/lib/site";
+import { MISSION, ORG, VISION } from "@/lib/site";
 
 export const metadata: Metadata = { title: "About GRAAS", description: `About the ${ORG.name}: why it exists, what it does, who it is for and how it works.` };
 
@@ -44,21 +44,15 @@ export default async function Page() {
           <Reveal>
             <div className="card h-full p-7 sm:p-9">
               <p className="text-sm font-semibold text-go-deep">Our mission</p>
-              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">Leading the global robotics revolution.</h2>
-              <p className="mt-4 text-ink2">
-                To promote innovation, learning, and collaboration in robotics and automation to develop technologies that support sustainable development, enhance
-                human welfare, and ensure safety and peace for society. To develop and promote innovative robotics and automation solutions that benefit academia,
-                industry, society and human welfare.
-              </p>
+              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">{MISSION.title}</h2>
+              <p className="mt-4 text-ink2">{MISSION.text.join(" ")}</p>
             </div>
           </Reveal>
           <Reveal delay={0.08}>
             <div className="card h-full bg-ink p-7 text-white sm:p-9">
               <p className="text-sm font-semibold text-go">Our vision</p>
-              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">A connected global community.</h2>
-              <p className="mt-4 text-white/75">
-                To nurture young minds across the globe for sustainable development, industrial growth, technology advancement, peace and the safety of all humanity.
-              </p>
+              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">{VISION.title}</h2>
+              <p className="mt-4 text-white/75">{VISION.text}</p>
             </div>
           </Reveal>
         </div>

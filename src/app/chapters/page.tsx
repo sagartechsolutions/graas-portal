@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import JoinBand from "@/components/home/JoinBand";
+import BranchFinder from "@/components/chapter/BranchFinder";
 import SeatCalc from "@/components/chapter/SeatCalc";
 import { FaqList, FeatureGrid, PageHero, SectionHead, StepsRail, Ticks } from "@/components/sections/Blocks";
 import Icon, { IconTile } from "@/components/ui/Icon";
@@ -31,6 +32,7 @@ export default async function Page() {
       priceNote: `student memberships, then ${seatFee ? rupees(seatFee) : "the Student fee"} per student a year`,
       points: [
         "Branch-wise: one chapter for each branch of a college",
+        "Any branch: Robotics and Automation, Mechanical, Electrical, Electronics, Computer, Mechatronics and more",
         "Led by a faculty member of that branch (preferred), who gets the chapter login",
         `Starts with at least ${s.min_members} students of the branch`,
         "A letter from the principal asking GRAAS to form the chapter",
@@ -125,8 +127,22 @@ export default async function Page() {
         </div>
       </section>
 
+      {/* Branches */}
+      <section id="branches" className="section scroll-mt-20">
+        <div className="shell">
+          <SectionHead
+            kicker="Every branch is welcome"
+            title="Robotics needs every branch."
+            intro="A robot is a machine, a circuit, a controller and a program at the same time, so every engineering branch has a part to play. Pick your branch to see how it connects. These are suggestions: a chapter can be formed for any branch."
+          />
+          <div className="mt-7">
+            <BranchFinder />
+          </div>
+        </div>
+      </section>
+
       {/* Benefits */}
-      <section className="section">
+      <section className="section bg-mist">
         <div className="shell">
           <SectionHead kicker="Why form a chapter" title="What a college chapter gets." intro="For the department, the coordinator and every student in it." />
           <div className="mt-7">

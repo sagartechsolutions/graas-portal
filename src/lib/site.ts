@@ -3,6 +3,19 @@ export const ORG = {
   short: "GRAAS",
 };
 
+/** The society's official mission and vision. Shown on Home and About; change the words here only. */
+export const MISSION = {
+  title: "Leading the global robotics revolution.",
+  text: [
+    "To promote innovation, learning, and collaboration in robotics and automation to develop technologies that support sustainable development, enhance human welfare, and ensure safety and peace for society.",
+    "To develop and promote innovative robotics and automation solutions that benefit academia, industry, society and human welfare.",
+  ],
+};
+export const VISION = {
+  title: "A connected global community.",
+  text: "To nurture young minds across the globe for sustainable development, industrial growth, technology advancement, peace and the safety of all humanity.",
+};
+
 /** Main menu, in order. "More" holds the rest. */
 export const NAV = [
   { href: "/", label: "Home" },

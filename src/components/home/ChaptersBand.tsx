@@ -37,6 +37,16 @@ export default function ChaptersBand({ freeSeats = 15, minMembers = 10 }: { free
               </p>
               <h2 className="h-section mt-3">Bring GRAAS to your campus, free to start.</h2>
               <p className="lede mt-4 !text-white/70">A chapter is a team of students and a faculty or teacher coordinator who run robotics activity on campus, with GRAAS behind them.</p>
+              <p className="mt-5 text-sm font-semibold text-white/60">For every engineering branch</p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {["Robotics and Automation", "Mechanical", "Electrical", "Electronics", "Computer", "Mechatronics", "and more"].map((b) => (
+                  <li key={b}>
+                    <Link href="/chapters#branches" className="inline-block rounded-full border border-white/20 px-3 py-1 text-sm text-white/85 transition-colors hover:border-go hover:text-white">
+                      {b}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/chapters/apply" className="btn btn-light">
                   Start a chapter

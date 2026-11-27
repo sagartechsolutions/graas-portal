@@ -100,11 +100,12 @@ function DetailsForm({ d, kind, onSaved }: { d: D; kind: "college" | "school"; o
                 ))}
               </select>
               {locked && <input type="hidden" name="branch" value={branch} />}
+              {!locked && <span className="text-sm font-normal text-ink2">Branch not in the list? Choose &quot;Other&quot; and type its name. Every branch is welcome.</span>}
             </label>
             {branch === "Other" ? (
               <label className={lbl}>
                 Name of the branch
-                <input name="branch_other" className="field" defaultValue={c.branch_other ?? ""} maxLength={80} readOnly={locked} required {...bad("branch_other")} />
+                <input name="branch_other" className="field" defaultValue={c.branch_other ?? ""} maxLength={80} readOnly={locked} required placeholder="For example Textile, Mining, Aerospace" {...bad("branch_other")} />
               </label>
             ) : (
               <label className={lbl}>

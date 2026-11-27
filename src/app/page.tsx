@@ -10,6 +10,7 @@ import GalleryStrip from "@/components/home/GalleryStrip";
 import Hero from "@/components/home/Hero";
 import JoinBand from "@/components/home/JoinBand";
 import Lab from "@/components/home/Lab";
+import MissionVision from "@/components/home/MissionVision";
 import Ticker from "@/components/home/Ticker";
 import UpdatesPreview from "@/components/home/UpdatesPreview";
 import WhatIsGraas from "@/components/home/WhatIsGraas";
@@ -25,6 +26,7 @@ export default async function Home() {
       <Ticker />
       <WhatIsGraas />
       <Facts freeSeats={chapters.free_seats} maxDiscount={maxDiscount || 40} />
+      <MissionVision />
       <Audiences />
       <Benefits />
       <EventsBand />
