@@ -7,6 +7,7 @@ import "./globals.css";
 import AuthWatch from "@/components/site/AuthWatch";
 import Footer from "@/components/site/Footer";
 import Header from "@/components/site/Header";
+import IdleGuard from "@/components/site/IdleGuard";
 import ScrollReset from "@/components/site/ScrollReset";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </main>
         <Footer />
         <AuthWatch />
+        <IdleGuard />
       </body>
     </html>
   );

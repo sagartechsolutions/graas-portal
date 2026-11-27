@@ -26,6 +26,7 @@ import OrgOpps from "@/components/opps/OrgOpps";
 import MemberEvents from "@/components/events/MemberEvents";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
 import { LockedPage, UnlockCard, UnpaidBar } from "./Unlock";
+import DeviceSetting from "./DeviceSetting";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
 type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels; options?: ProfileOptions; my_chapter?: any; chapter_member?: any };
@@ -1591,7 +1592,12 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
                 </ul>
               </div>
             ))}
-          {current === "profile" && <Profile a={a} reload={reload} />}
+          {current === "profile" && (
+            <>
+              <DeviceSetting userId={a.profile.id} />
+              <Profile a={a} reload={reload} />
+            </>
+          )}
           {current === "help" && <Help a={a} reload={reload} />}
         </div>
         </div>

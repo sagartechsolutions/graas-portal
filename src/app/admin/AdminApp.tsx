@@ -2,7 +2,8 @@
 
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { browserClient, signOutAndReset } from "@/lib/browser";
+import { browserClient, markActive, setOwnDevice, signOutAndReset } from "@/lib/browser";
+import { OwnDeviceBox } from "@/components/member/SignInForm";
 import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
 import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
@@ -66,8 +67,12 @@ function SignIn() {
     const f = new FormData(e.currentTarget);
     setBusy(true);
     setErr("");
-    const { error } = await sb().auth.signInWithPassword({ email: String(f.get("email")), password: String(f.get("password")) });
+    const { data, error } = await sb().auth.signInWithPassword({ email: String(f.get("email")), password: String(f.get("password")) });
     if (error) setErr("That email and password do not match a staff account.");
+    else {
+      markActive();
+      setOwnDevice(f.get("own_device") === "on" ? (data.user?.id ?? null) : null);
+    }
     setBusy(false);
   }
   return (
@@ -83,6 +88,7 @@ function SignIn() {
             Password
             <input name="password" type="password" className="field" autoComplete="current-password" required />
           </label>
+          <OwnDeviceBox />
           {err && (
             <p role="alert" className="font-semibold text-[#8f1a11]">
               {err}
