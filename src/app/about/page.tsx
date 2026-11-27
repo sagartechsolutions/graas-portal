@@ -43,21 +43,21 @@ export default async function Page() {
         <div className="shell grid gap-8 lg:grid-cols-2 lg:gap-12">
           <Reveal>
             <div className="card h-full p-7 sm:p-9">
-              <p className="text-sm font-semibold text-go-deep">Our purpose</p>
-              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">Close the gap between learning and doing.</h2>
+              <p className="text-sm font-semibold text-go-deep">Our mission</p>
+              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">Leading the global robotics revolution.</h2>
               <p className="mt-4 text-ink2">
-                Robotics and automation are changing how things are made. Too many students meet them only in a textbook, and too many factories cannot find people who
-                have built anything. GRAAS exists to close that gap: by putting real machines, real problems and real engineers in front of learners, early and often.
+                To promote innovation, learning, and collaboration in robotics and automation to develop technologies that support sustainable development, enhance
+                human welfare, and ensure safety and peace for society. To develop and promote innovative robotics and automation solutions that benefit academia,
+                industry, society and human welfare.
               </p>
             </div>
           </Reveal>
           <Reveal delay={0.08}>
             <div className="card h-full bg-ink p-7 text-white sm:p-9">
               <p className="text-sm font-semibold text-go">Our vision</p>
-              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">A robotics generation, from every town.</h2>
+              <h2 className="h-section mt-3 !text-[clamp(1.7rem,1.2rem+1.6vw,2.6rem)]">A connected global community.</h2>
               <p className="mt-4 text-white/75">
-                A country where a student in a small town can build a robot in school, lead a chapter in college, solve a problem for a company before graduating, and
-                be hired because of what they have built, not only what they have memorised.
+                To nurture young minds across the globe for sustainable development, industrial growth, technology advancement, peace and the safety of all humanity.
               </p>
             </div>
           </Reveal>
