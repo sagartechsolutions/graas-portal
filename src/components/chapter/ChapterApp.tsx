@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import HostEvents from "@/components/events/HostEvents";
 import ChangePassword from "@/components/member/ChangePassword";
@@ -12,7 +12,7 @@ import { ChapterCertificate } from "@/components/member/MemberDocs";
 import Qr from "@/components/member/Qr";
 import { VerifyCard } from "@/components/member/Verify";
 import Icon, { IconTile } from "@/components/ui/Icon";
-import { browserClient, portal } from "@/lib/browser";
+import { browserClient, portal, signOutAndReset } from "@/lib/browser";
 import { INDIAN_STATES, inr, shortDate } from "@/lib/money";
 import { readFileTable, rowsFromTable, type RosterRow } from "./sheet";
 
@@ -752,7 +752,6 @@ function StepCard({ n, title, done, children, open = true }: { n: number; title:
 }
 
 export default function ChapterApp() {
-  const router = useRouter();
   const params = useSearchParams();
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [d, setD] = useState<D | null>(null);
@@ -856,7 +855,7 @@ export default function ChapterApp() {
         )}
       </div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="btn btn-ghost !min-h-11" onClick={() => sb().auth.signOut().then(() => router.push("/"))}>
+        <button type="button" className="btn btn-ghost !min-h-11" onClick={() => signOutAndReset("/")}>
           Sign out
         </button>
       </div>

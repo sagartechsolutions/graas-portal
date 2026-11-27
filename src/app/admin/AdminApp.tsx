@@ -2,7 +2,7 @@
 
 import type { Session } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { browserClient } from "@/lib/browser";
+import { browserClient, signOutAndReset } from "@/lib/browser";
 import { LEAD_KINDS } from "@/lib/site";
 import { Gallery, Updates } from "./Content";
 import { Activity, Dashboard, Helpdesk, Policies, Staff } from "./Desk";
@@ -605,7 +605,7 @@ export default function AdminApp() {
           <a href="/" className="btn btn-go">
             Go to the website
           </a>
-          <button type="button" className="btn btn-quiet" onClick={() => sb().auth.signOut()}>
+          <button type="button" className="btn btn-quiet" onClick={() => signOutAndReset("/admin")}>
             Sign out
           </button>
         </div>
@@ -655,7 +655,7 @@ export default function AdminApp() {
           <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => setTab("mylogin")}>
             My login
           </button>
-          <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => sb().auth.signOut()}>
+          <button type="button" className="btn btn-quiet !min-h-10 !py-2" onClick={() => signOutAndReset("/admin")}>
             Sign out
           </button>
         </div>

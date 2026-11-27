@@ -4,6 +4,7 @@ import "@fontsource-variable/ibm-plex-sans";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
+import AuthWatch from "@/components/site/AuthWatch";
 import Footer from "@/components/site/Footer";
 import Header from "@/components/site/Header";
 import ScrollReset from "@/components/site/ScrollReset";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        <AuthWatch />
       </body>
     </html>
   );

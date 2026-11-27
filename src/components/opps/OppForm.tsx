@@ -122,7 +122,7 @@ export default function OppForm({ initial, staff = false, onDone, onCancel }: { 
         </label>
         <label className={lbl}>
           Location
-          <input className="field" maxLength={120} value={f.location ?? ""} onChange={(e) => set("location", e.target.value)} placeholder="Ambad MIDC, Nashik" />
+          <input className="field" maxLength={120} value={f.location ?? ""} onChange={(e) => set("location", e.target.value)} placeholder="Area, city" />
         </label>
         <label className={lbl}>
           {f.kind === "challenge" ? "Prize" : f.kind === "job" ? "Salary" : "Stipend or pay"}

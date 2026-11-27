@@ -99,7 +99,7 @@ export default function EventForm({ mode, initial, onDone, onCancel }: { mode: M
         </label>
         <label className={`${lbl} sm:col-span-2`}>
           Their role
-          <input className="field" maxLength={160} value={f.speaker_title ?? ""} onChange={(e) => set("speaker_title", e.target.value)} placeholder="Head of Automation, ACME Motors" />
+          <input className="field" maxLength={160} value={f.speaker_title ?? ""} onChange={(e) => set("speaker_title", e.target.value)} placeholder="Designation, company name" />
         </label>
         <label className={`${lbl} sm:col-span-3`}>
           About the speaker

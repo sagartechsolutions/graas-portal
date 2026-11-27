@@ -9,7 +9,7 @@ import HostEvents from "@/components/events/HostEvents";
 import { Tags } from "@/components/member/CareerProfile";
 import ChangePassword from "@/components/member/ChangePassword";
 import { VerifyCard } from "@/components/member/Verify";
-import { browserClient, portal } from "@/lib/browser";
+import { browserClient, portal, signOutAndReset } from "@/lib/browser";
 import { inr } from "@/lib/money";
 
 /* The Expert studio: industry leaders and trainers apply to host, then create sessions, see registrations,
@@ -24,7 +24,7 @@ export function ExpertFields({ f, set, bad }: { f: any; set: (k: string, v: any)
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={lbl}>
           Headline
-          <input className="field" maxLength={160} value={f.headline ?? ""} onChange={(e) => set("headline", e.target.value)} placeholder="Head of Automation, ACME Motors" {...bad("headline")} />
+          <input className="field" maxLength={160} value={f.headline ?? ""} onChange={(e) => set("headline", e.target.value)} placeholder="Designation, company name" {...bad("headline")} />
         </label>
         <label className={lbl}>
           Organisation
@@ -191,7 +191,7 @@ export default function StudioApp() {
         <h1 className="h-section !text-[clamp(1.8rem,1.3rem+2vw,2.8rem)]">{d?.expert?.full_name ?? "Teach on GRAAS"}</h1>
       </div>
       {session && (
-        <button type="button" className="btn btn-ghost !min-h-11" onClick={() => sb().auth.signOut()}>
+        <button type="button" className="btn btn-ghost !min-h-11" onClick={() => signOutAndReset("/studio")}>
           Sign out
         </button>
       )}

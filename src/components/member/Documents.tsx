@@ -148,7 +148,7 @@ function Upload({ userId, onDone, goResume }: { userId: string; onDone: (msg: st
           <>
             <label className="grid gap-1.5 text-[0.95rem] font-medium">
               Issued by
-              <input className="field" value={issuer} onChange={(e) => setIssuer(e.target.value)} maxLength={120} placeholder="Siemens, NPTEL, college name…" />
+              <input className="field" value={issuer} onChange={(e) => setIssuer(e.target.value)} maxLength={120} placeholder="Organisation, institute or college name" />
             </label>
             <label className="grid gap-1.5 text-[0.95rem] font-medium">
               Date issued

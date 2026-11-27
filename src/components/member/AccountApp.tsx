@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Logo from "@/components/site/Logo";
-import { browserClient, portal } from "@/lib/browser";
+import Icon from "@/components/ui/Icon";
+import { browserClient, portal, signOutAndReset } from "@/lib/browser";
 import { STATUS_LABEL, effectiveStatus, inr, shortDate } from "@/lib/money";
 import { normPhone, phoneText } from "@/lib/format";
 import CountryState, { PHONE_HINT } from "./Region";
@@ -24,6 +25,7 @@ import MemberOpps from "@/components/opps/MemberOpps";
 import OrgOpps from "@/components/opps/OrgOpps";
 import MemberEvents from "@/components/events/MemberEvents";
 import { Alert, CodeForm, VerifyCard } from "./Verify";
+import { LockedPage, UnlockCard, UnpaidBar } from "./Unlock";
 
 type Channels = { email: boolean; whatsapp: boolean; email_required: boolean; phone_required: boolean };
 type Account = { profile: any; membership: any | null; orders: any[]; tickets: any[]; referrals: number; pay_online: boolean; is_staff: boolean; today: string; channels?: Channels; options?: ProfileOptions; my_chapter?: any; chapter_member?: any };
@@ -677,13 +679,20 @@ function Overview({ a, plans, state, reload }: { a: Account; plans: Plan[]; stat
         <Steps m={m} state={state} />
 
         {state === "pending_approval" && <Notice>GRAAS is verifying your application. This usually takes a few working days. When it is verified, you will be able to pay here.</Notice>}
-        {state === "pending_payment" && <PayPanel a={a} renewal={false} onChange={reload} />}
+        {state === "pending_payment" && Number(m.plan?.price_inr) > 0 && (
+          <UnlockCard org={!isIndividual(m.plan?.audience)} fee={planFee(m.plan)} needEmail={!!a.channels?.email && !a.profile.email_verified_at} />
+        )}
+        {state === "pending_payment" && (
+          <div id="pay-panel" className="scroll-mt-24">
+            <PayPanel a={a} renewal={false} onChange={reload} />
+          </div>
+        )}
         {state === "suspended" && <Notice tone="bad">This membership is suspended.{m.decision_reason ? ` Reason given: ${m.decision_reason}` : ""} You can reply from the Help tab.</Notice>}
         {state === "expired" && (
-          <>
+          <div id="pay-panel" className="grid scroll-mt-24 gap-6">
             <Notice tone="warn">Your membership ended on {shortDate(m.ends_on)}. Renew to keep your member number {m.member_no}.</Notice>
             <PayPanel a={a} renewal onChange={reload} />
-          </>
+          </div>
         )}
         {state === "active" && (
           <dl className="grid gap-4 sm:grid-cols-3">
@@ -1228,7 +1237,7 @@ function OtherLogin({ kind, email }: { kind: "staff" | "chapter"; email: string 
           <Link href={kind === "staff" ? "/admin" : "/chapter"} className="btn btn-primary">
             {kind === "staff" ? "Open admin" : "Open the chapter console"}
           </Link>
-          <button type="button" className="btn btn-ghost" onClick={() => sb().auth.signOut().then(() => (window.location.href = "/"))}>
+          <button type="button" className="btn btn-ghost" onClick={() => signOutAndReset("/")}>
             Sign out
           </button>
         </div>
@@ -1387,7 +1396,8 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
     if (msg) setFlash(msg);
     load();
   };
-  if (!session || !a) return <div className="shell py-16 text-ink2">Loading your account…</div>;
+  // Show an account only to the person it belongs to (guards against a page kept from an earlier sign-in).
+  if (!session || !a || (a.profile && a.profile.id !== session.user.id)) return <div className="shell py-16 text-ink2">Loading your account…</div>;
   if (!a.profile) return <div className="shell py-16 text-ink2">Your account could not be loaded. Please sign out and sign in again.</div>;
 
   if (a.profile.must_change_password && (a.membership || !a.my_chapter)) return <FirstPassword a={a} done={() => reload2("Welcome to GRAAS. Your password is set.")} />;
@@ -1405,13 +1415,21 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
   const needPhone = !!a.channels?.whatsapp && !!a.profile.phone && !a.profile.phone_verified_at;
   const orgMember = !!m && !isIndividual(m.plan?.audience);
   const school = m?.plan?.code === "school-student";
+  // Applied but not paid (with a fee set), or ended: show what they are missing and how to pay.
+  const unpaid = state === "pending_payment" && Number(m?.plan?.price_inr) > 0;
+  const lapsed = state === "expired";
+  const fee = m?.plan && Number(m.plan.price_inr) > 0 ? planFee(m.plan) : "";
+  const goPay = () => {
+    setTab("overview");
+    window.setTimeout(() => document.getElementById(needEmail ? "confirm-contact" : "pay-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  };
   const groups = [
     {
       title: "My GRAAS",
       items: [
-        { id: "home", label: orgMember ? "Our page" : "My profile", show: hasId },
+        { id: "home", label: orgMember ? "Our page" : "My profile", show: hasId || unpaid, locked: !hasId },
         { id: "overview", label: "Membership", show: true },
-        { id: "certificates", label: "ID and certificates", show: hasId },
+        { id: "certificates", label: "ID and certificates", show: hasId || unpaid, locked: !hasId },
       ],
     },
     {
@@ -1465,6 +1483,12 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
                       <li key={t.id}>
                         <button type="button" aria-current={current === t.id ? "page" : undefined} onClick={() => open(t.id)} className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[0.95rem] font-medium transition-colors ${current === t.id ? "bg-ink text-white" : "hover:bg-white"}`}>
                           {t.label}
+                          {"locked" in t && t.locked && (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${current === t.id ? "bg-white/15 text-white" : "bg-mist text-ink2"}`}>
+                              <Icon name="lock" size={10} />
+                              Locked
+                            </span>
+                          )}
                           {t.id === "host" && current !== "host" && <span className="rounded-full bg-go-soft px-2 py-0.5 text-[0.7rem] font-semibold text-go-deep">New</span>}
                         </button>
                       </li>
@@ -1478,18 +1502,20 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
                     Chapter console
                   </Link>
                 )}
-                <button type="button" className="btn btn-ghost !min-h-10" onClick={() => sb().auth.signOut()}>
+                <button type="button" className="btn btn-ghost !min-h-10" onClick={() => signOutAndReset("/")}>
                   Sign out
                 </button>
               </div>
             </nav>
             <div role="tablist" aria-label="Account sections" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:hidden">
               {all.map((t) => (
-                <button key={t.id} role="tab" type="button" aria-selected={current === t.id} onClick={() => open(t.id)} className={`whitespace-nowrap rounded-full px-4 py-2 text-[0.95rem] font-semibold shadow-[var(--shadow-card)] transition-colors ${current === t.id ? "bg-ink text-white" : "bg-white text-ink2 hover:text-ink"}`}>
+                <button key={t.id} role="tab" type="button" aria-selected={current === t.id} onClick={() => open(t.id)} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[0.95rem] font-semibold shadow-[var(--shadow-card)] transition-colors ${current === t.id ? "bg-ink text-white" : "bg-white text-ink2 hover:text-ink"}`}>
+                  {"locked" in t && t.locked && <Icon name="lock" size={12} />}
                   {t.label}
+                  {"locked" in t && t.locked && <span className="sr-only">(locked until payment)</span>}
                 </button>
               ))}
-              <button type="button" className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-[0.95rem] font-semibold text-ink2 shadow-[var(--shadow-card)]" onClick={() => sb().auth.signOut()}>
+              <button type="button" className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-[0.95rem] font-semibold text-ink2 shadow-[var(--shadow-card)]" onClick={() => signOutAndReset("/")}>
                 Sign out
               </button>
             </div>
@@ -1503,6 +1529,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           </div>
         )}
         <div>
+          {(unpaid || lapsed) && current !== "overview" && <UnpaidBar expired={lapsed} fee={fee} onPay={goPay} />}
           {(current === "overview" || current === "home") && (needEmail || needPhone) && (
             <div id="confirm-contact" className="mb-5 grid gap-5 lg:grid-cols-2 print:hidden">
               {needEmail && <VerifyCard kind="email" target={a.profile.email} required={a.channels?.email_required} onDone={() => reload("Your email is confirmed.")} />}
@@ -1514,7 +1541,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
               <TakePledge name={a.profile.full_name ?? ""} onDone={(msg) => reload(msg)} />
             </div>
           )}
-          {current === "home" && <ProfileHome a={a} state={state} go={open} />}
+          {current === "home" && (hasId ? <ProfileHome a={a} state={state} go={open} /> : <LockedPage kind="profile" name={(orgMember ? a.profile.organisation : a.profile.full_name) || a.profile.full_name || ""} planName={m?.plan?.name ?? ""} org={orgMember} fee={fee} onPay={goPay} />)}
           {current === "overview" && <Overview a={a} plans={plans} state={state} reload={reload} />}
           {current === "career" && m && <CareerProfile a={a} goDetails={() => open("profile")} />}
           {current === "resume" && m && <Resume a={a} goDocuments={() => open("documents")} />}
@@ -1522,7 +1549,7 @@ export default function AccountApp({ plans: allPlans }: { plans: Plan[] }) {
           {current === "events" && <MemberEvents a={a} />}
           {current === "host" && m && <HostSession a={a} school={school} />}
           {current === "opportunities" && m && (orgMember ? <OrgOpps /> : <MemberOpps a={a} goProfile={() => open("career")} />)}
-          {current === "certificates" && hasId && <Certificates a={a} org={org} state={state} go={open} />}
+          {current === "certificates" && (hasId ? <Certificates a={a} org={org} state={state} go={open} /> : <LockedPage kind="certificates" name={(orgMember ? a.profile.organisation : a.profile.full_name) || a.profile.full_name || ""} planName={m?.plan?.name ?? ""} org={orgMember} fee={fee} onPay={goPay} />)}
           {current === "payments" &&
             (receipt ? (
               <div className="grid gap-5">

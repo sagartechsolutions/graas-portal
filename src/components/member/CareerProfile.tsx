@@ -17,12 +17,12 @@ const LISTS: Record<string, { title: string; hint: string; add: string; fields: 
     add: "Add experience",
     fields: [
       { k: "title", label: "Role", ph: "Automation intern" },
-      { k: "org", label: "Company or organisation", ph: "ACME Controls" },
+      { k: "org", label: "Company or organisation", ph: "Company name" },
       { k: "kind", label: "Type", ph: "Internship, full time, part time…" },
-      { k: "place", label: "Place", ph: "Nashik" },
+      { k: "place", label: "Place", ph: "City" },
       { k: "from", label: "From", ph: "Jun 2025" },
       { k: "to", label: "To", ph: "Aug 2025", check: "current" },
-      { k: "summary", label: "What you did", ph: "Programmed a Siemens S7-1200 PLC for a packing line…", wide: true, area: true },
+      { k: "summary", label: "What you did", ph: "What you worked on and what you achieved…", wide: true, area: true },
     ],
   },
   education: {
@@ -31,8 +31,8 @@ const LISTS: Record<string, { title: string; hint: string; add: string; fields: 
     add: "Add education",
     fields: [
       { k: "course", label: "Course", ph: "B.E. Mechanical Engineering" },
-      { k: "institute", label: "College or school", ph: "Late G N Sapkal College of Engineering" },
-      { k: "board", label: "University or board", ph: "SPPU" },
+      { k: "institute", label: "College or school", ph: "College or school name" },
+      { k: "board", label: "University or board", ph: "University or board name" },
       { k: "from", label: "From", ph: "2023" },
       { k: "to", label: "To", ph: "2027" },
       { k: "score", label: "Score", ph: "8.2 CGPA or 86%" },
@@ -67,7 +67,7 @@ const LISTS: Record<string, { title: string; hint: string; add: string; fields: 
     add: "Add a certification",
     fields: [
       { k: "name", label: "Name", ph: "PLC programming level 1" },
-      { k: "issuer", label: "Issued by", ph: "Siemens, NPTEL, Coursera…" },
+      { k: "issuer", label: "Issued by", ph: "Organisation or institute name" },
       { k: "year", label: "Year", ph: "2025" },
       { k: "link", label: "Link", ph: "https://…" },
     ],
